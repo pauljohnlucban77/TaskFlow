@@ -29,6 +29,8 @@ import { productService, promotionService } from '../../services';
 import { Product, Category } from '../../types/product';
 import { Promotion } from '../../types/promotion';
 import { useAnnouncements } from '../../context/AnnouncementsContext';
+import { useLoyalty } from '../../hooks/useLoyalty';
+import { LoyaltyCard } from '../../components/loyalty/LoyaltyCard';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -39,6 +41,8 @@ export default function HomeScreen() {
     dismissUrgent,
     announcements,
   } = useAnnouncements();
+
+  const { balance, account } = useLoyalty();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
@@ -164,7 +168,10 @@ export default function HomeScreen() {
               <View style={styles.searchResultsGrid}>
                 {searchResults.map((product) => (
                   <View key={product.id} style={styles.searchItemWrapper}>
-                    <ProductCard product={product} />
+                    <ProductCard
+                      product={product}
+                      onPress={() => router.push(`/products/${product.id}` as any)}
+                    />
                   </View>
                 ))}
               </View>
@@ -173,6 +180,17 @@ export default function HomeScreen() {
         ) : (
           /* Normal Home Page Layout */
           <>
+            <View style={styles.loyaltySection}>
+              <SectionHeader
+                title="Your Loyalty Card"
+                subtitle="Earn points for every purchase"
+              />
+              <LoyaltyCard
+                account={account}
+                onPress={() => router.push('/loyalty' as any)}
+              />
+            </View>
+
             {/* Promotions Carousel */}
             {promotions.length > 0 && (
               <PromotionCarousel
@@ -206,7 +224,11 @@ export default function HomeScreen() {
                   subtitle="Handcrafted daily by Master Baker Fred"
                 />
                 {featuredProducts.map((product) => (
-                  <FeaturedProductCard key={product.id} product={product} />
+                  <FeaturedProductCard
+                    key={product.id}
+                    product={product}
+                    onPress={() => router.push(`/products/${product.id}` as any)}
+                  />
                 ))}
               </View>
             )}
@@ -226,7 +248,12 @@ export default function HomeScreen() {
                   showsHorizontalScrollIndicator={false}
                   keyExtractor={(item) => item.id}
                   contentContainerStyle={styles.horizontalList}
-                  renderItem={({ item }) => <ProductCard product={item} />}
+                  renderItem={({ item }) => (
+                    <ProductCard
+                      product={item}
+                      onPress={() => router.push(`/products/${item.id}` as any)}
+                    />
+                  )}
                 />
               </View>
             )}
@@ -272,6 +299,7 @@ export default function HomeScreen() {
                 <Text style={styles.specialButtonText}>View Specials & Deals</Text>
               </Pressable>
             </View>
+
           </>
         )}
       </ScrollView>
@@ -416,5 +444,16 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: Typography.sizes.sm,
     fontWeight: Typography.weights.semiBold,
+  },
+  loyaltySection: {
+    marginVertical: Spacing.sm,
+  },
+  loyaltyCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: Spacing.radiusLg,
+    padding: Spacing.xl,
+    margin: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
 });

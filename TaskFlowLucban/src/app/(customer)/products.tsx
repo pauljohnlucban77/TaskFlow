@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, FlatList, ScrollView } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors } from '../../constants/colors';
 import { Spacing } from '../../constants/spacing';
 import { ProductCard } from '../../components/bakery/ProductCard';
@@ -11,6 +11,7 @@ import { productService } from '../../services';
 import { Product, Category } from '../../types/product';
 
 export default function ProductsScreen() {
+  const router = useRouter();
   const params = useLocalSearchParams<{ category?: string }>();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -83,7 +84,10 @@ export default function ProductsScreen() {
           columnWrapperStyle={styles.columnWrapper}
           renderItem={({ item }) => (
             <View style={styles.cardWrapper}>
-              <ProductCard product={item} />
+              <ProductCard
+                product={item}
+                onPress={() => router.push(`/products/${item.id}` as any)}
+              />
             </View>
           )}
         />
