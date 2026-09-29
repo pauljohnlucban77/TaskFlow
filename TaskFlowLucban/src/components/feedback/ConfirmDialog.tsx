@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, View, Modal, Pressable, ActivityIndicator } from 'react-native';
+import React, { useEffect } from 'react';
+import { BackHandler, StyleSheet, Text, View, Pressable, ActivityIndicator } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
@@ -25,52 +25,59 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  useEffect(() => {
+    if (!visible) return;
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (!loading) onCancel();
+      return true;
+    });
+
+    return () => subscription.remove();
+  }, [loading, onCancel, visible]);
+
+  if (!visible) return null;
+
   return (
-    <Modal
-      transparent
-      animationType="fade"
-      visible={visible}
-      onRequestClose={onCancel}
-    >
-      <View style={styles.overlay}>
-        <View style={styles.dialog}>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.message}>{message}</Text>
+    <View style={styles.overlay}>
+      <View style={styles.dialog} accessibilityViewIsModal accessibilityRole="alert">
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.message}>{message}</Text>
 
-          <View style={styles.buttonRow}>
-            <Pressable
-              onPress={onCancel}
-              disabled={loading}
-              style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}
-            >
-              <Text style={styles.cancelText}>{cancelText}</Text>
-            </Pressable>
+        <View style={styles.buttonRow}>
+          <Pressable
+            onPress={onCancel}
+            disabled={loading}
+            style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}
+          >
+            <Text style={styles.cancelText}>{cancelText}</Text>
+          </Pressable>
 
-            <Pressable
-              onPress={onConfirm}
-              disabled={loading}
-              style={({ pressed }) => [styles.confirmButton, pressed && styles.pressed]}
-            >
-              {loading ? (
-                <ActivityIndicator color={Colors.white} size="small" />
-              ) : (
-                <Text style={styles.confirmText}>{confirmText}</Text>
-              )}
-            </Pressable>
-          </View>
+          <Pressable
+            onPress={onConfirm}
+            disabled={loading}
+            style={({ pressed }) => [styles.confirmButton, pressed && styles.pressed]}
+          >
+            {loading ? (
+              <ActivityIndicator color={Colors.white} size="small" />
+            ) : (
+              <Text style={styles.confirmText}>{confirmText}</Text>
+            )}
+          </Pressable>
         </View>
       </View>
-    </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: Spacing.lg,
+    zIndex: 10,
   },
   dialog: {
     backgroundColor: Colors.surface,
@@ -79,10 +86,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 360,
     elevation: 5,
-    shadowColor: Colors.text,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.25)',
   },
   title: {
     fontSize: Typography.sizes.lg,

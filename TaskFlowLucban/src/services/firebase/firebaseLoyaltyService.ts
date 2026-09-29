@@ -18,6 +18,9 @@ import { calculatePointsEarned } from '../../utils/loyalty';
 
 export const firebaseLoyaltyService: LoyaltyService = {
   async getOrCreateCustomer(customerId: string, email: string, name = 'Valued Customer'): Promise<LoyaltyCustomer> {
+    if (customerId === 'mock-customer-123') {
+      return mockLoyaltyService.getOrCreateCustomer(customerId, email, name);
+    }
     if (!db) return mockLoyaltyService.getOrCreateCustomer(customerId, email, name);
     try {
       const docRef = doc(db, 'customers', customerId);
@@ -114,6 +117,9 @@ export const firebaseLoyaltyService: LoyaltyService = {
   },
 
   async earnPoints(customerId: string, purchaseAmount: number): Promise<{ pointsEarned: number; newBalance: number }> {
+    if (customerId === 'mock-customer-123') {
+      throw new Error('Create an account and buy a product to earn points.');
+    }
     if (!db) return mockLoyaltyService.earnPoints(customerId, purchaseAmount);
     const pointsEarned = calculatePointsEarned(purchaseAmount);
     if (pointsEarned <= 0) {
@@ -167,6 +173,14 @@ export const firebaseLoyaltyService: LoyaltyService = {
       const customerRef = doc(db, 'customers', customerId);
       const rewardRef = doc(db, 'rewards', rewardId);
       const txRef = doc(collection(db, 'loyalty_transactions'));
+      const earnedTransactions = await getDocs(query(
+        collection(db, 'loyalty_transactions'),
+        where('customerId', '==', customerId),
+        where('type', '==', 'earned')
+      ));
+      if (earnedTransactions.empty) {
+        throw new Error('Buy a product to earn points before redeeming rewards.');
+      }
 
       let finalBalance = 0;
       let redeemedReward: Reward | null = null;
@@ -207,6 +221,9 @@ export const firebaseLoyaltyService: LoyaltyService = {
       return { newBalance: finalBalance, reward: redeemedReward! };
     } catch (e: any) {
       if (e instanceof InsufficientPointsError) {
+        throw e;
+      }
+      if (e instanceof Error && e.message.includes('Buy a product')) {
         throw e;
       }
       console.warn('[Firebase] redeemReward transaction failed, falling back to mock:', e);

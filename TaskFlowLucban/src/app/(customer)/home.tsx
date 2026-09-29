@@ -42,7 +42,7 @@ export default function HomeScreen() {
     announcements,
   } = useAnnouncements();
 
-  const { balance, account } = useLoyalty();
+  const { balance, account, hasPurchased } = useLoyalty();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
@@ -141,7 +141,7 @@ export default function HomeScreen() {
             accessibilityRole="button"
           >
             <Ionicons name="star" size={14} color={Colors.accent} />
-            <Text style={styles.pointsChipText}>{balance} pts</Text>
+            <Text style={styles.pointsChipText}>{hasPurchased ? `${balance} pts` : 'Buy to earn points'}</Text>
           </Pressable>
           <AnnouncementBell
             unreadCount={unreadCount}

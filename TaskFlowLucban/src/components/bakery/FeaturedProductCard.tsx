@@ -105,10 +105,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     overflow: 'hidden',
     elevation: 3,
-    shadowColor: Colors.text,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
+    boxShadow: '0px 3px 6px rgba(0, 0, 0, 0.08)',
   },
   clickableArea: {
     width: '100%',

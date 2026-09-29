@@ -11,7 +11,6 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
   serverTimestamp,
 } from 'firebase/firestore';
 import { mockFeedbackService } from '../mock/mockFeedbackService';
@@ -50,8 +49,7 @@ export const firebaseFeedbackService: FeedbackService = {
     try {
       const q = query(
         collection(db, 'feedback'),
-        where('customerId', '==', customerId),
-        orderBy('createdAt', 'desc')
+        where('customerId', '==', customerId)
       );
       const snapshot = await getDocs(q);
       const list = snapshot.docs.map((d: any) => {
@@ -67,7 +65,7 @@ export const firebaseFeedbackService: FeedbackService = {
         };
       });
       if (list.length === 0) return mockFeedbackService.getMyFeedback(customerId);
-      return list;
+      return list.sort((first, second) => second.createdAt.localeCompare(first.createdAt));
     } catch (e) {
       console.warn('[Firebase] getMyFeedback error, falling back to mock:', e);
       return mockFeedbackService.getMyFeedback(customerId);

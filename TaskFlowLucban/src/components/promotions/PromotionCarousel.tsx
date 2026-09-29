@@ -42,6 +42,17 @@ export function PromotionCarousel({ promotions, onSelectPromotion }: PromotionCa
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item.id}
+        getItemLayout={(_, index) => ({
+          length: CARD_WIDTH + Spacing.md,
+          offset: (CARD_WIDTH + Spacing.md) * index,
+          index,
+        })}
+        onScrollToIndexFailed={({ index }) => {
+          flatListRef.current?.scrollToOffset({
+            offset: (CARD_WIDTH + Spacing.md) * index,
+            animated: true,
+          });
+        }}
         snapToInterval={CARD_WIDTH + Spacing.md}
         decelerationRate="fast"
         contentContainerStyle={styles.listContainer}

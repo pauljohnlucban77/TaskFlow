@@ -20,7 +20,7 @@ export function AnnouncementBell({ unreadCount, onPress }: AnnouncementBellProps
         accessibilityLabel={`Announcements, ${unreadCount} unread`}
       />
       {unreadCount > 0 && (
-        <View style={styles.badge} pointerEvents="none">
+        <View style={styles.badge}>
           <Text style={styles.badgeText}>{displayCount}</Text>
         </View>
       )}
@@ -33,6 +33,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   badge: {
+    pointerEvents: 'none',
     position: 'absolute',
     top: -2,
     right: -2,

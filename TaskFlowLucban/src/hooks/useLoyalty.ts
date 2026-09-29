@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { loyaltyService } from '../services';
+import { mockLoyaltyService } from '../services/mock/mockLoyaltyService';
 import { Reward, LoyaltyTransaction, InsufficientPointsError, calculateLoyaltyAccount } from '../types/loyalty';
 import { useAuth } from '../context/AuthContext';
 
 export function useLoyalty() {
-  const { uid, email } = useAuth();
+  const { uid, email, isMockUser, user } = useAuth();
 
   const [balance, setBalance] = useState<number>(0);
   const [rewards, setRewards] = useState<Reward[]>([]);
@@ -12,9 +13,11 @@ export function useLoyalty() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [redeemingId, setRedeemingId] = useState<string | null>(null);
+  const [hasPurchased, setHasPurchased] = useState(false);
 
   const activeUid = uid;
   const activeEmail = email;
+  const activeLoyaltyService = isMockUser ? mockLoyaltyService : loyaltyService;
   const customerName = activeEmail ? activeEmail.split('@')[0] : 'Valued Customer';
 
   const account = useMemo(() => {
@@ -26,6 +29,7 @@ export function useLoyalty() {
       setBalance(0);
       setRewards([]);
       setHistory([]);
+      setHasPurchased(false);
       setLoading(false);
       setError(null);
       return;
@@ -35,31 +39,35 @@ export function useLoyalty() {
       setLoading(true);
       setError(null);
 
-      const customer = await loyaltyService.getOrCreateCustomer(activeUid, activeEmail || 'customer@fredspies.com');
-      setBalance(customer ? customer.points : 0);
+      const customer = await activeLoyaltyService.getOrCreateCustomer(activeUid, activeEmail || 'customer@fredspies.com');
+      setBalance(isMockUser ? 0 : (customer ? customer.points : 0));
 
       const [rList, hList] = await Promise.all([
-        loyaltyService.getActiveRewards(),
-        loyaltyService.getTransactionHistory(activeUid),
+        activeLoyaltyService.getActiveRewards(),
+        activeLoyaltyService.getTransactionHistory(activeUid),
       ]);
 
       setRewards(rList || []);
       setHistory(hList || []);
+      setHasPurchased((hList || []).some((transaction) => transaction.type === 'earned'));
     } catch (e: any) {
       console.warn('[useLoyalty] Error loading loyalty data:', e);
       setError(e.message || 'Failed to load loyalty data.');
     } finally {
       setLoading(false);
     }
-  }, [activeUid, activeEmail]);
+  }, [activeLoyaltyService, activeUid, activeEmail, isMockUser]);
 
   useEffect(() => {
     loadLoyaltyData();
   }, [loadLoyaltyData]);
 
   const redeem = async (reward: Reward) => {
-    if (!activeUid) {
-      throw new Error('Please sign in to redeem rewards.');
+    if (isMockUser || !user) {
+      throw new Error('Create an account and buy a product before redeeming rewards.');
+    }
+    if (!hasPurchased) {
+      throw new Error('Buy a product to earn points before redeeming rewards.');
     }
 
     if (redeemingId) return;
@@ -67,10 +75,10 @@ export function useLoyalty() {
       setRedeemingId(reward.id);
       setError(null);
 
-      const result = await loyaltyService.redeemReward(activeUid, reward.id);
+      const result = await activeLoyaltyService.redeemReward(activeUid, reward.id);
       setBalance(result.newBalance);
 
-      const newHistory = await loyaltyService.getTransactionHistory(activeUid);
+      const newHistory = await activeLoyaltyService.getTransactionHistory(activeUid);
       setHistory(newHistory);
 
       return result;
@@ -88,17 +96,18 @@ export function useLoyalty() {
   };
 
   const earn = async (purchaseAmount: number) => {
-    if (!activeUid) {
-      throw new Error('Please sign in to earn points.');
+    if (isMockUser || !user) {
+      throw new Error('Create an account and buy a product to earn points.');
     }
 
     try {
       setError(null);
-      const result = await loyaltyService.earnPoints(activeUid, purchaseAmount);
+      const result = await activeLoyaltyService.earnPoints(activeUid, purchaseAmount);
       setBalance(result.newBalance);
 
-      const newHistory = await loyaltyService.getTransactionHistory(activeUid);
+      const newHistory = await activeLoyaltyService.getTransactionHistory(activeUid);
       setHistory(newHistory);
+      setHasPurchased((previous) => previous || result.pointsEarned > 0);
 
       return result;
     } catch (e: any) {
@@ -116,6 +125,7 @@ export function useLoyalty() {
     loading,
     error,
     redeemingId,
+    hasPurchased,
     refresh: loadLoyaltyData,
     redeem,
     earn,

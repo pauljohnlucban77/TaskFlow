@@ -11,7 +11,7 @@ import { Typography } from '../../constants/typography';
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, uid, email, signIn, signUp, signOut, isMockUser } = useAuth();
-  const { balance } = useLoyalty();
+  const { balance, hasPurchased } = useLoyalty();
 
   const [inputEmail, setInputEmail] = useState('');
   const [inputPass, setInputPass] = useState('');
@@ -70,7 +70,7 @@ export default function ProfileScreen() {
             </View>
             <View>
               <Text style={styles.rowTitle}>Loyalty & Rewards</Text>
-              <Text style={styles.rowSubtitle}>{balance} points available</Text>
+              <Text style={styles.rowSubtitle}>{hasPurchased ? `${balance} points available` : 'Buy a product to start earning points'}</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={20} color={Colors.textMuted} />

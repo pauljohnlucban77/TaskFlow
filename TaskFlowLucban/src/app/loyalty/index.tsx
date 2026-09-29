@@ -11,6 +11,7 @@ import {
   Pressable,
 } from 'react-native';
 import { useLoyalty } from '../../hooks/useLoyalty';
+import { useAuth } from '../../context/AuthContext';
 import { LoyaltyCard } from '../../components/loyalty/LoyaltyCard';
 import { RewardCard } from '../../components/loyalty/RewardCard';
 import { TransactionItem } from '../../components/loyalty/TransactionItem';
@@ -24,10 +25,17 @@ import { Typography } from '../../constants/typography';
 import { formatPrice } from '../../utils/formatPrice';
 
 export default function LoyaltyScreen() {
-  const { balance, account, rewards, history, loading, error, redeemingId, refresh, redeem, earn } = useLoyalty();
+  const { user } = useAuth();
+  const { balance, account, rewards, history, loading, error, redeemingId, hasPurchased, refresh, redeem, earn } = useLoyalty();
   const [refreshing, setRefreshing] = useState(false);
   const [simulatedAmount, setSimulatedAmount] = useState('250');
   const [simulating, setSimulating] = useState(false);
+  const [pendingReward, setPendingReward] = useState<Reward | null>(null);
+  const [redemptionMessage, setRedemptionMessage] = useState<{
+    title: string;
+    message: string;
+    isError: boolean;
+  } | null>(null);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -36,18 +44,8 @@ export default function LoyaltyScreen() {
   };
 
   const handleRedeemPress = (reward: Reward) => {
-    Alert.alert(
-      'Confirm Redemption',
-      `Redeem "${reward.name}" for ${reward.pointsRequired} points?\n\nCurrent Balance: ${balance} pts\nNew Balance: ${balance - reward.pointsRequired} pts`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm Redemption',
-          style: 'default',
-          onPress: () => processRedemption(reward),
-        },
-      ]
-    );
+    setRedemptionMessage(null);
+    setPendingReward(reward);
   };
 
   const processRedemption = async (reward: Reward) => {
@@ -60,19 +58,27 @@ export default function LoyaltyScreen() {
           code += codeChar.charAt(Math.floor(Math.random() * codeChar.length));
         }
 
-        Alert.alert(
-          'Reward Redeemed! 🎉',
-          `Reward: ${result.reward.name}\n\nReward Code:\n${code}\n\nPresent this code when claiming your reward in-store.\n\nNew Balance: ${result.newBalance} points`
-        );
+        setPendingReward(null);
+        setRedemptionMessage({
+          title: 'Reward Redeemed!',
+          message: `Reward: ${result.reward.name}\n\nReward Code: ${code}\n\nPresent this code when claiming your reward in-store.\n\nNew Balance: ${result.newBalance} points`,
+          isError: false,
+        });
       }
     } catch (e: any) {
+      setPendingReward(null);
       if (e instanceof InsufficientPointsError) {
-        Alert.alert('Insufficient Points', e.message);
+        setRedemptionMessage({ title: 'Insufficient Points', message: e.message, isError: true });
       } else {
-        Alert.alert('Redemption Failed', e.message || 'Something went wrong. Please try again.');
+        setRedemptionMessage({
+          title: 'Redemption Failed',
+          message: e.message || 'Something went wrong. Please try again.',
+          isError: true,
+        });
       }
     }
   };
+
 
   const handleSimulateEarn = async () => {
     const amount = parseFloat(simulatedAmount);
@@ -99,6 +105,7 @@ export default function LoyaltyScreen() {
     }
   };
 
+
   return (
     <ScrollView
       style={styles.container}
@@ -109,7 +116,53 @@ export default function LoyaltyScreen() {
     >
       <LoyaltyCard account={account} onPress={() => {}} />
 
-      {__DEV__ && (
+      {pendingReward && (
+        <View style={styles.redemptionPanel}>
+          <Text style={styles.redemptionTitle}>Confirm Redemption</Text>
+          <Text style={styles.redemptionText}>
+            Redeem {pendingReward.name} for {pendingReward.pointsRequired} points? Current balance: {balance} points.
+          </Text>
+          <View style={styles.redemptionActions}>
+            <Pressable
+              onPress={() => setPendingReward(null)}
+              disabled={redeemingId === pendingReward.id}
+              style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => void processRedemption(pendingReward)}
+              disabled={!user || !hasPurchased || redeemingId === pendingReward.id}
+              style={({ pressed }) => [styles.confirmButton, pressed && styles.pressed]}
+              accessibilityRole="button"
+            >
+              {redeemingId === pendingReward.id ? (
+                <ActivityIndicator color={Colors.white} size="small" />
+              ) : (
+                <Text style={styles.confirmButtonText}>Confirm Redemption</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      )}
+
+      {redemptionMessage && (
+        <View
+          style={[styles.redemptionPanel, redemptionMessage.isError && styles.redemptionError]}
+          accessibilityRole="alert"
+        >
+          <Text style={styles.redemptionTitle}>{redemptionMessage.title}</Text>
+          <Text style={styles.redemptionText}>{redemptionMessage.message}</Text>
+          <Pressable
+            onPress={() => setRedemptionMessage(null)}
+            style={({ pressed }) => [styles.confirmButton, pressed && styles.pressed]}
+          >
+            <Text style={styles.confirmButtonText}>Done</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {__DEV__ && user && (
         <View style={styles.devCard}>
           <Text style={styles.devTitle}>🛠️ Simulate Purchase (Staff Test)</Text>
           <Text style={styles.devSubtitle}>
@@ -166,7 +219,7 @@ export default function LoyaltyScreen() {
                 key={reward.id}
                 reward={reward}
                 userPoints={balance}
-                onRedeem={handleRedeemPress}
+                onRedeem={user && hasPurchased ? handleRedeemPress : () => {}}
                 isRedeeming={redeemingId === reward.id}
               />
             ))
@@ -264,6 +317,61 @@ const styles = StyleSheet.create({
   devButtonText: {
     color: Colors.white,
     fontWeight: Typography.weights.bold,
+  },
+  redemptionPanel: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: Spacing.radiusMd,
+    padding: Spacing.md,
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  redemptionError: {
+    borderColor: Colors.error,
+  },
+  redemptionTitle: {
+    fontSize: Typography.sizes.md,
+    fontWeight: Typography.weights.bold,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  redemptionText: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: Spacing.md,
+  },
+  redemptionActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  cancelButton: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  cancelButtonText: {
+    color: Colors.textSecondary,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.semiBold,
+  },
+  confirmButton: {
+    minHeight: 40,
+    minWidth: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Spacing.radiusSm,
+  },
+  confirmButtonText: {
+    color: Colors.white,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.bold,
+    textAlign: 'center',
   },
   pressed: {
     opacity: 0.85,

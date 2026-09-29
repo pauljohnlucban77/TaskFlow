@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const uid = user?.uid ?? 'guest-customer-123';
+  const uid = user?.uid ?? 'mock-customer-123';
   const email = user?.email ?? '';
   const isMockUser = !user;
 
