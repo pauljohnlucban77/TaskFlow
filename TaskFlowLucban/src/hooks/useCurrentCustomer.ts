@@ -11,7 +11,7 @@ export function useCurrentCustomer() {
     customerId: uid,
     customerName: email ? email.split('@')[0] : 'Valued Customer',
     email,
-    isAuthenticated: !!user || isMockUser,
+    isAuthenticated: !!user,
     isMockUser,
   };
 }

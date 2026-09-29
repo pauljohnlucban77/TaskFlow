@@ -38,7 +38,7 @@ export default function MyFeedbackScreen() {
     try {
       setIsDeleting(true);
       await deleteFeedbackItem(deletingItem.id);
-    } catch (e: any) {
+    } catch {
       // Handled in hook
     } finally {
       setIsDeleting(false);

@@ -42,7 +42,7 @@ export default function HomeScreen() {
     announcements,
   } = useAnnouncements();
 
-  const { balance, account } = useLoyalty();
+  const { account } = useLoyalty();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
@@ -50,7 +50,6 @@ export default function HomeScreen() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [popularProducts, setPopularProducts] = useState<Product[]>([]);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,7 +71,6 @@ export default function HomeScreen() {
     } catch (e: any) {
       setError(e.message || 'Failed to load bakery catalog');
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
   };
@@ -102,6 +100,29 @@ export default function HomeScreen() {
       pathname: '/(customer)/products',
       params: { category: categoryId },
     } as any);
+  };
+
+  const handlePromotionPress = (promotionId: string) => {
+    const promotion = promotions.find((item) => item.id === promotionId);
+    if (!promotion) {
+      router.push(`/promotions/${promotionId}` as any);
+      return;
+    }
+
+    if (promotion.applicableProductIds && promotion.applicableProductIds[0]) {
+      router.push(`/products/${promotion.applicableProductIds[0]}` as any);
+      return;
+    }
+
+    if (promotion.applicableCategoryIds && promotion.applicableCategoryIds[0]) {
+      router.push({
+        pathname: '/(customer)/products',
+        params: { category: promotion.applicableCategoryIds[0] },
+      } as any);
+      return;
+    }
+
+    router.push(`/promotions/${promotionId}` as any);
   };
 
   return (
@@ -195,7 +216,7 @@ export default function HomeScreen() {
             {promotions.length > 0 && (
               <PromotionCarousel
                 promotions={promotions}
-                onSelectPromotion={(id) => router.push(`/promotions/${id}` as any)}
+                onSelectPromotion={handlePromotionPress}
               />
             )}
 

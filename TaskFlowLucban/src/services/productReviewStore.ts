@@ -22,19 +22,33 @@ export async function getProductReviews(productId: string): Promise<ProductRevie
 }
 
 export async function saveProductReview(
-  review: Omit<ProductReview, 'id' | 'createdAt'>
+  review: Omit<ProductReview, 'createdAt' | 'id'> & { createdAt?: string; id?: string }
 ): Promise<ProductReview> {
   const reviews = await readReviews();
-  const savedReview: ProductReview = {
+  const normalizedComment = review.comment.trim();
+  const resolvedReview: ProductReview = {
     ...review,
-    id: `${review.productId}-${review.customerId}-${Date.now()}`,
-    createdAt: new Date().toISOString(),
+    id: review.id || `${review.productId}-${review.customerId}-${Date.now()}`,
+    customerName: review.customerName || 'Customer',
+    comment: normalizedComment,
+    createdAt: review.createdAt || new Date().toISOString(),
   };
+
   const updatedReviews = reviews.filter(
     (existing) =>
-      existing.productId !== review.productId || existing.customerId !== review.customerId
+      !(existing.productId === review.productId && existing.customerId === review.customerId)
   );
-  updatedReviews.push(savedReview);
+  updatedReviews.push(resolvedReview);
+
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedReviews));
-  return savedReview;
+  return resolvedReview;
+}
+
+export async function deleteProductReview(productId: string, customerId: string): Promise<boolean> {
+  const reviews = await readReviews();
+  const remaining = reviews.filter(
+    (review) => !(review.productId === productId && review.customerId === customerId)
+  );
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(remaining));
+  return remaining.length !== reviews.length;
 }

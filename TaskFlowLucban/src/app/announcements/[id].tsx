@@ -18,12 +18,10 @@ export default function AnnouncementDetailScreen() {
   const { markAsRead } = useAnnouncements();
 
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadAnnouncement = async () => {
     try {
-      setLoading(true);
       setError(null);
       const item = await announcementService.getAnnouncementById(id);
       setAnnouncement(item);
@@ -32,8 +30,6 @@ export default function AnnouncementDetailScreen() {
       }
     } catch (e: any) {
       setError(e.message || 'Failed to load announcement details');
-    } finally {
-      setLoading(false);
     }
   };
 

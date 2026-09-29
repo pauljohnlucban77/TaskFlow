@@ -16,12 +16,10 @@ export default function ProductsScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>(params.category || 'all');
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
-      setLoading(true);
       setError(null);
       const [pList, cList] = await Promise.all([
         productService.getProducts(),
@@ -31,8 +29,6 @@ export default function ProductsScreen() {
       setCategories(cList);
     } catch (e: any) {
       setError(e.message || 'Failed to load products');
-    } finally {
-      setLoading(false);
     }
   };
 

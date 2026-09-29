@@ -50,7 +50,6 @@ export default function HomeScreen() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [popularProducts, setPopularProducts] = useState<Product[]>([]);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,7 +71,6 @@ export default function HomeScreen() {
     } catch (e: any) {
       setError(e.message || 'Failed to load bakery catalog');
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
   };

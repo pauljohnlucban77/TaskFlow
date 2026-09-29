@@ -23,6 +23,27 @@ export function isFirebaseConfigured(): boolean {
   );
 }
 
+export function getRuntimeDataSource(): 'mock' | 'firebase' {
+  const requestedSource = process.env.EXPO_PUBLIC_DATA_SOURCE || 'mock';
+
+  if (requestedSource !== 'firebase') {
+    return 'mock';
+  }
+
+  if (!isFirebaseConfigured()) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'Firebase is required in production, but one or more EXPO_PUBLIC_FIREBASE_* values are missing or invalid.'
+      );
+    }
+
+    console.warn('[Firebase] Firebase config is incomplete. Falling back to mock data in development mode.');
+    return 'mock';
+  }
+
+  return 'firebase';
+}
+
 if (process.env.EXPO_PUBLIC_DATA_SOURCE === 'firebase') {
   if (isFirebaseConfigured()) {
     try {
@@ -30,11 +51,15 @@ if (process.env.EXPO_PUBLIC_DATA_SOURCE === 'firebase') {
       db = getFirestore(app);
       try {
         auth = getAuth(app);
-      } catch (e) {
+      } catch {
         auth = null;
       }
       console.log('[Firebase] Initialized successfully for Fred\'s Pies');
-    } catch (error) {
+    } catch {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('Firebase initialization failed in production mode.');
+      }
+
       console.warn('[Firebase] Initialization failed. Falling back to mock data.');
     }
   }

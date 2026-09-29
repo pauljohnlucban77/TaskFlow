@@ -9,14 +9,13 @@ import { firebasePromotionService } from './firebase/firebasePromotionService';
 import { firebaseAnnouncementService } from './firebase/firebaseAnnouncementService';
 import { firebaseLoyaltyService } from './firebase/firebaseLoyaltyService';
 import { firebaseFeedbackService } from './firebase/firebaseFeedbackService';
-import { isFirebaseConfigured } from '../lib/firebase';
+import { getRuntimeDataSource } from '../lib/firebase';
 
-const dataSource = process.env.EXPO_PUBLIC_DATA_SOURCE || 'mock';
+const dataSource = getRuntimeDataSource();
+const useFirebase = dataSource === 'firebase';
 
-const useFirebase = dataSource === 'firebase' && isFirebaseConfigured();
-
-if (dataSource === 'firebase' && !useFirebase) {
-  console.warn('[Services] EXPO_PUBLIC_DATA_SOURCE is firebase but config is invalid. Using mock data service.');
+if (dataSource === 'mock' && process.env.EXPO_PUBLIC_DATA_SOURCE === 'firebase') {
+  console.warn('[Services] Firebase was requested but not available. Using mock data service in development mode.');
 }
 
 export const productService: ProductService = useFirebase ? firebaseProductService : mockProductService;

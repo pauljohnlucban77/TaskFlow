@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth, isFirebaseConfigured } from '../lib/firebase';
+import { auth } from '../lib/firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -21,9 +21,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const MOCK_USER_UID = 'mock-customer-123';
-const MOCK_USER_EMAIL = 'customer@fredspies.com';
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -42,8 +39,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [dataSource]);
 
   const isMockUser = dataSource === 'mock' || !auth || !user;
-  const uid = user ? user.uid : MOCK_USER_UID;
-  const email = user ? user.email || '' : MOCK_USER_EMAIL;
+  const uid = user?.uid ?? '';
+  const email = user?.email ?? '';
 
   const signIn = async (emailInput: string, passInput: string) => {
     if (!auth) throw new Error('Firebase Auth not available');

@@ -28,8 +28,39 @@ src/
    ```bash
    npm install
    ```
-2. Start the development server:
+2. Copy the example environment file and fill in your values:
+   ```bash
+   cp .env.example .env
+   ```
+3. Start the development server:
    ```bash
    npx expo start
    ```
-3. Open in **Expo Go** by scanning the QR code with your mobile device (ensure phone and PC are on the same Wi-Fi network, or use `npx expo start --tunnel`).
+4. Open in **Expo Go** by scanning the QR code with your mobile device (ensure phone and PC are on the same Wi-Fi network, or use `npx expo start --tunnel`).
+
+## Production Deployment Checklist
+- Set `EXPO_PUBLIC_DATA_SOURCE=firebase` only when Firebase config is valid.
+- Ensure all `EXPO_PUBLIC_FIREBASE_*` values are present in the production environment.
+- Do not allow silent mock fallback in production builds.
+- Run the environment validation before shipping:
+  ```bash
+  npm run check:env
+  ```
+- Run the project validation gate:
+  ```bash
+  npm run validate
+  ```
+- Run regression tests:
+  ```bash
+  npm test -- --runInBand
+  ```
+- Review Firestore security rules before allowing live customers access.
+- Test the review, cart, loyalty, announcements, and notification flows on a real device before launch.
+
+## Final QA and Deployment Docs
+- Final QA report: [docs/final-qa-report.md](docs/final-qa-report.md)
+- Deployment runbook: [docs/deployment-runbook.md](docs/deployment-runbook.md)
+- Firebase schema notes: [docs/firebase-schema.md](docs/firebase-schema.md)
+
+## Release Status
+The project has been hardened for production readiness, including Firebase fail-fast checks, review reset fixes, validation scripts, and regression tests. Final live-device and Firebase security verification are still required before a full production certification signoff.

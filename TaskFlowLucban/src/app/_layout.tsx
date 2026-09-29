@@ -1,12 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { CartProvider } from '../context/CartContext';
 import { AnnouncementsProvider } from '../context/AnnouncementsContext';
 import { AuthProvider } from '../context/AuthContext';
 import { Colors } from '../constants/colors';
+import { configureNotificationHandlers } from '../lib/notifications';
 
 export default function RootLayout() {
+  useEffect(() => {
+    configureNotificationHandlers();
+  }, []);
+
   return (
     <AuthProvider>
       <CartProvider>

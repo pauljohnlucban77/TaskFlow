@@ -11,7 +11,7 @@ import { useAnnouncements } from '../../context/AnnouncementsContext';
 
 export default function AnnouncementsFeedScreen() {
   const router = useRouter();
-  const { announcements, unreadIds, markAllAsRead, refresh, error, loading } = useAnnouncements();
+  const { announcements, unreadIds, markAllAsRead, refresh, error } = useAnnouncements();
 
   useEffect(() => {
     refresh();

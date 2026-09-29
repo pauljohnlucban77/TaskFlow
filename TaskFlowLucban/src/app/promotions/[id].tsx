@@ -14,19 +14,15 @@ import { Promotion } from '../../types/promotion';
 export default function PromotionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [promotion, setPromotion] = useState<Promotion | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadPromo = async () => {
     try {
-      setLoading(true);
       setError(null);
       const item = await promotionService.getPromotionById(id);
       setPromotion(item);
     } catch (e: any) {
       setError(e.message || 'Failed to load promotion details');
-    } finally {
-      setLoading(false);
     }
   };
 

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { loyaltyService } from '../services';
-import { mockLoyaltyService } from '../services/mock/mockLoyaltyService';
 import { Reward, LoyaltyTransaction, InsufficientPointsError, calculateLoyaltyAccount } from '../types/loyalty';
 import { useAuth } from '../context/AuthContext';
 
@@ -14,8 +13,8 @@ export function useLoyalty() {
   const [error, setError] = useState<string | null>(null);
   const [redeemingId, setRedeemingId] = useState<string | null>(null);
 
-  const activeUid = uid || 'mock-customer-123';
-  const activeEmail = email || 'customer@fredspies.com';
+  const activeUid = uid;
+  const activeEmail = email;
   const customerName = activeEmail ? activeEmail.split('@')[0] : 'Valued Customer';
 
   const account = useMemo(() => {
@@ -23,11 +22,20 @@ export function useLoyalty() {
   }, [customerName, activeEmail, activeUid, balance]);
 
   const loadLoyaltyData = useCallback(async () => {
+    if (!activeUid) {
+      setBalance(0);
+      setRewards([]);
+      setHistory([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
-      const customer = await loyaltyService.getOrCreateCustomer(activeUid, activeEmail);
+      const customer = await loyaltyService.getOrCreateCustomer(activeUid, activeEmail || 'customer@fredspies.com');
       setBalance(customer ? customer.points : 0);
 
       const [rList, hList] = await Promise.all([
@@ -38,17 +46,8 @@ export function useLoyalty() {
       setRewards(rList || []);
       setHistory(hList || []);
     } catch (e: any) {
-      console.warn('[useLoyalty] Error loading loyalty data, falling back to mock:', e);
-      try {
-        const mockCustomer = await mockLoyaltyService.getOrCreateCustomer('mock-customer-123', 'customer@fredspies.com');
-        setBalance(mockCustomer.points);
-        const rList = await mockLoyaltyService.getActiveRewards();
-        const hList = await mockLoyaltyService.getTransactionHistory('mock-customer-123');
-        setRewards(rList);
-        setHistory(hList);
-      } catch (err) {
-        setError(e.message || 'Failed to load loyalty data.');
-      }
+      console.warn('[useLoyalty] Error loading loyalty data:', e);
+      setError(e.message || 'Failed to load loyalty data.');
     } finally {
       setLoading(false);
     }
@@ -59,6 +58,10 @@ export function useLoyalty() {
   }, [loadLoyaltyData]);
 
   const redeem = async (reward: Reward) => {
+    if (!activeUid) {
+      throw new Error('Please sign in to redeem rewards.');
+    }
+
     if (redeemingId) return;
     try {
       setRedeemingId(reward.id);
@@ -85,6 +88,10 @@ export function useLoyalty() {
   };
 
   const earn = async (purchaseAmount: number) => {
+    if (!activeUid) {
+      throw new Error('Please sign in to earn points.');
+    }
+
     try {
       setError(null);
       const result = await loyaltyService.earnPoints(activeUid, purchaseAmount);

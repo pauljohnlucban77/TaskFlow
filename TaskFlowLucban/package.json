@@ -30,6 +30,10 @@
   "devDependencies": {
     "@types/node": "^26.6.3",
     "@types/react": "~19.2.2",
+    "@typescript-eslint/eslint-plugin": "^8.71.0",
+    "@typescript-eslint/parser": "^8.71.0",
+    "eslint": "^8.57.1",
+    "eslint-config-expo": "^57.0.2",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -37,7 +41,11 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "typecheck": "tsc --noEmit",
+    "check:env": "node scripts/check-env.js",
+    "validate": "npm run check:env && npm run lint && npm run typecheck",
+    "test": "node --test scripts/**/*.test.js"
   },
   "private": true
 }

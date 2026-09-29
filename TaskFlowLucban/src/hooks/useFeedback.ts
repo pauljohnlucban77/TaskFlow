@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { feedbackService } from '../services';
-import { mockFeedbackService } from '../services/mock/mockFeedbackService';
 import { FeedbackItem, FeedbackInput } from '../types/feedback';
 import { useCurrentCustomer } from './useCurrentCustomer';
 import { validateFeedback } from '../utils/validateFeedback';
 
 export function useFeedback() {
   const { customerId, customerName } = useCurrentCustomer();
-  const activeUid = customerId || 'mock-customer-123';
+  const activeUid = customerId;
 
   const [feedbackList, setFeedbackList] = useState<FeedbackItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -15,19 +14,20 @@ export function useFeedback() {
   const [submitting, setSubmitting] = useState<boolean>(false);
 
   const loadMyFeedback = useCallback(async () => {
+    if (!activeUid) {
+      setFeedbackList([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
       const list = await feedbackService.getMyFeedback(activeUid);
       setFeedbackList(list || []);
     } catch (e: any) {
-      console.warn('[useFeedback] Error loading feedback, falling back to mock:', e);
-      try {
-        const mockList = await mockFeedbackService.getMyFeedback('mock-customer-123');
-        setFeedbackList(mockList);
-      } catch (err) {
-        setError(e.message || 'Failed to load feedback.');
-      }
+      setError(e.message || 'Failed to load feedback.');
     } finally {
       setLoading(false);
     }
@@ -38,6 +38,10 @@ export function useFeedback() {
   }, [loadMyFeedback]);
 
   const submitFeedback = async (rating: number, comment: string) => {
+    if (!activeUid) {
+      throw new Error('Please sign in to submit feedback.');
+    }
+
     const validation = validateFeedback(rating, comment);
     if (!validation.isValid) {
       const msg = Object.values(validation.errors).join(' ');
@@ -61,6 +65,10 @@ export function useFeedback() {
   };
 
   const updateFeedbackItem = async (id: string, rating: number, comment: string) => {
+    if (!activeUid) {
+      throw new Error('Please sign in to update feedback.');
+    }
+
     const validation = validateFeedback(rating, comment);
     if (!validation.isValid) {
       const msg = Object.values(validation.errors).join(' ');
@@ -84,6 +92,10 @@ export function useFeedback() {
   };
 
   const deleteFeedbackItem = async (id: string) => {
+    if (!activeUid) {
+      throw new Error('Please sign in to delete feedback.');
+    }
+
     try {
       setSubmitting(true);
       setError(null);

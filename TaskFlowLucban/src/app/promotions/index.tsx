@@ -12,19 +12,15 @@ import { Promotion } from '../../types/promotion';
 export default function AllPromotionsScreen() {
   const router = useRouter();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadPromotions = async () => {
     try {
-      setLoading(true);
       setError(null);
       const list = await promotionService.getActivePromotions();
       setPromotions(list);
     } catch (e: any) {
       setError(e.message || 'Failed to load promotions');
-    } finally {
-      setLoading(false);
     }
   };
 
