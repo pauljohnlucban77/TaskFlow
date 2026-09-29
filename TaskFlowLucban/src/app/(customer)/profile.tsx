@@ -56,6 +56,13 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {user && !hasPurchased && (
+        <View style={styles.loyaltyNotice}>
+          <Text style={styles.loyaltyNoticeTitle}>No points yet</Text>
+          <Text style={styles.loyaltyNoticeText}>Points become available after a successful simulated demo checkout.</Text>
+        </View>
+      )}
+
       {/* Navigation Rows */}
       <View style={styles.section}>
         <Pressable
@@ -102,7 +109,7 @@ export default function ProfileScreen() {
             {isSignUpMode ? 'Create Fred\'s Pies Account' : 'Sign In to Your Account'}
           </Text>
           <Text style={styles.authSubtitle}>
-            Sign in to sync your loyalty points and feedback.
+            Sign in to sync your demo orders, points, and feedback.
           </Text>
 
           <TextInput
@@ -200,6 +207,24 @@ const styles = StyleSheet.create({
     color: Colors.warning,
     fontWeight: Typography.weights.bold,
     marginTop: 2,
+  },
+  loyaltyNotice: {
+    backgroundColor: Colors.surfaceVariant,
+    borderRadius: Spacing.radiusMd,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.accent,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  loyaltyNoticeTitle: {
+    color: Colors.text,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.bold,
+    marginBottom: 3,
+  },
+  loyaltyNoticeText: {
+    color: Colors.textSecondary,
+    fontSize: Typography.sizes.xs,
   },
   section: {
     backgroundColor: Colors.surface,

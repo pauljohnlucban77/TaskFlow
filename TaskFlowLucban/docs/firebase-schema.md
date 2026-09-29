@@ -63,7 +63,7 @@
 - `email` (string)
 - `points` (number): non-negative integer
 - `createdAt` (Timestamp)
-- `lastRedemptionId` (string, optional): transaction ID paired with the latest atomic client redemption
+- `lastRedemptionId` (string, optional): transaction ID paired with the latest atomic redemption
 
 ### 6. `rewards`
 - `id` (Document ID / string)
@@ -80,13 +80,32 @@
 - `purchaseAmount` (number, optional): when type == 'earned'
 - `rewardId` (string, optional): when type == 'redeemed'
 - `rewardName` (string, optional)
+- `orderId` (string, optional): originating order ID for demo checkout points
+- `source` (`simulated_checkout`, optional): identifies staging demo awards
 - `createdAt` (Timestamp)
+
+### 8. `orders`
+- `id` (Document ID): `{Auth UID}_{requestId}` for idempotency
+- `customerId` (string): Auth UID
+- `requestId` (string): client-generated retry key
+- `items` (array): product ID, server-read name/price, quantity, and line total
+- `subtotal`, `discount`, `total` (number): server-calculated Philippine pesos
+- `pointsAwarded` (integer)
+- `promoCode`, `promoId` (string or null, optional)
+- `fulfillmentType` (`pickup`)
+- `paymentMode` (`simulated`), `paymentStatus` (`simulated_success`)
+- `status` (`demo_confirmed`), `isDemo` (true)
+- `createdAt` (Timestamp)
+
+Orders and simulated checkout point awards are created by the trusted Admin SDK function. Authenticated customers cannot create profiles or award transactions from the client. A first simulated checkout creates a customer's points profile when it grants points; customers can still read an absent profile as a zero balance.
+
+Orders and loyalty awards are written atomically by the authenticated `completeDemoCheckout` Cloud Function using the Admin SDK. App clients can read only their own orders; they cannot create orders, set simulated payment state, or grant points. Checkout applies only active `percent_off` and `amount_off` promos and calculates percentage discounts over eligible item lines. Client reward redemption is atomic and validated against an active reward and its current point cost in Firestore rules.
 
 ---
 
 ## Phase 3: Customer Feedback & Rating Collection
 
-### 8. `feedback`
+### 9. `feedback`
 - `id` (Document ID / string)
 - `customerId` (string = Auth UID)
 - `customerName` (string)
@@ -94,11 +113,6 @@
 - `comment` (string): max 500 characters
 - `createdAt` (Timestamp)
 - `updatedAt` (Timestamp)
-
-### 9. `staff`
-- `id` (Document ID = Staff Auth UID)
-- `role` (string): e.g. "cashier" or "manager"
-- `created` (Timestamp)
 
 ---
 
@@ -108,19 +122,10 @@
 - `announcements`: `publishedAt` (Descending)
 - `loyalty_transactions`: `customerId` (Ascending) + `createdAt` (Descending)
 - `feedback`: `customerId` (Ascending) + `createdAt` (Descending)
+- `orders`: `customerId` (Ascending) + `createdAt` (Descending), optional if server-side ordering is later restored. The customer app currently filters by customer ID and sorts the returned orders locally to avoid requiring a composite index on existing Firebase projects.
 
 ---
 
-## How to Switch from Mock to Firebase
-1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com/).
-2. Enable **Cloud Firestore** and **Firebase Authentication** (Email/Password provider).
-3. Register a Web App in Project Settings and copy the configuration object.
-4. Create a `.env` file in the project root (copy from `.env.example`) and fill in your Firebase web config credentials.
-5. Set `EXPO_PUBLIC_DATA_SOURCE=firebase` in `.env`.
-6. Deploy `firestore.rules` using the Firebase CLI or paste them in the Firestore Rules tab.
-7. To test staff features (earning points), create a document in `staff/{YOUR_AUTH_UID}` in the Firestore console.
-8. Restart the development server with cache cleared: `npx expo start -c`.
+## Staging setup
 
-## Spark Plan Loyalty Tradeoff
-
-On the Spark plan, client-side earning from a submitted purchase amount is not trustworthy: Firestore Rules cannot verify that the purchase was actually paid. Firebase-mode point awards are therefore disabled in the client. Authorized staff must grant verified points through a trusted administrative channel. Reward redemption remains available through an atomic transaction whose paired customer balance debit and transaction record are validated by Firestore Rules. No direct client point increases or transaction-ledger edits are allowed.
+Follow [the private demo deployment runbook](deployment-runbook.md). This Firebase configuration is staging-only: the Cloud Function requires a matching project ID ending in `-staging`, and the local Admin SDK seeder refuses other project IDs.

@@ -6,7 +6,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  setDoc,
   query,
   where,
   runTransaction,
@@ -20,32 +19,18 @@ export const firebaseLoyaltyService: LoyaltyService = {
     return runFirestore(db, 'load customer loyalty profile', async (firestore) => {
       const docRef = doc(firestore, 'customers', customerId);
       const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        return {
-          customerId: docSnap.id,
-          name: data.name || name,
-          email: data.email || email,
-          points: typeof data.points === 'number' ? data.points : 0,
-          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
-        };
-      } else {
-        const newCustomerData = {
-          name,
-          email,
-          points: 0,
-          createdAt: serverTimestamp(),
-        };
-        await setDoc(docRef, newCustomerData);
-        return {
-          customerId,
-          name,
-          email,
-          points: 0,
-          createdAt: new Date().toISOString(),
-        };
+      if (!docSnap.exists()) {
+        return { customerId, name, email, points: 0, createdAt: new Date().toISOString() };
       }
+
+      const data = docSnap.data();
+      return {
+        customerId: docSnap.id,
+        name: data.name || name,
+        email: data.email || email,
+        points: typeof data.points === 'number' ? data.points : 0,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+      };
     });
   },
 
@@ -119,6 +104,9 @@ export const firebaseLoyaltyService: LoyaltyService = {
 
         const rewardData = rewardSnap.data();
         const pointsRequired = rewardData.pointsRequired || 0;
+        if (!Number.isInteger(pointsRequired) || pointsRequired <= 0) {
+          throw new ServiceError('loyalty/reward-invalid', 'This reward has invalid redemption rules.');
+        }
         redeemedReward = mapReward(rewardSnap.id, rewardData);
 
         const customerSnap = await transaction.get(customerRef);

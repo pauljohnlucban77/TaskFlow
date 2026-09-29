@@ -1,14 +1,16 @@
-import { ProductService, PromotionService, AnnouncementService, LoyaltyService, FeedbackService } from './types';
+import { ProductService, PromotionService, AnnouncementService, LoyaltyService, FeedbackService, OrderService } from './types';
 import { mockProductService } from './mock/mockProductService';
 import { mockPromotionService } from './mock/mockPromotionService';
 import { mockAnnouncementService } from './mock/mockAnnouncementService';
 import { mockLoyaltyService } from './mock/mockLoyaltyService';
 import { mockFeedbackService } from './mock/mockFeedbackService';
+import { mockOrderService } from './mock/mockOrderService';
 import { firebaseProductService } from './firebase/firebaseProductService';
 import { firebasePromotionService } from './firebase/firebasePromotionService';
 import { firebaseAnnouncementService } from './firebase/firebaseAnnouncementService';
 import { firebaseLoyaltyService } from './firebase/firebaseLoyaltyService';
 import { firebaseFeedbackService } from './firebase/firebaseFeedbackService';
+import { firebaseOrderService } from './firebase/firebaseOrderService';
 import { getRuntimeDataSource, isFirebaseConfigured } from '../lib/firebase';
 import { ServiceError } from './serviceError';
 
@@ -58,3 +60,9 @@ export const feedbackService: FeedbackService = useFirebase
   : useMock
     ? mockFeedbackService
     : { createFeedback: unconfigured, getMyFeedback: unconfigured, getFeedbackById: unconfigured, updateFeedback: unconfigured, deleteFeedback: unconfigured };
+
+export const orderService: OrderService = useFirebase
+  ? firebaseOrderService
+  : useMock
+    ? mockOrderService
+    : { completeDemoCheckout: unconfigured, getMyOrders: unconfigured };

@@ -33,6 +33,11 @@ function validateEnvironment(env) {
     errors.push('EXPO_PUBLIC_DATA_SOURCE must be "firebase" in production');
   }
 
+  if (env.EXPO_PUBLIC_DEMO_MODE === 'true'
+      && !env.EXPO_PUBLIC_FIREBASE_PROJECT_ID?.endsWith('-staging')) {
+    errors.push('Demo builds must use a Firebase project ID ending in "-staging"');
+  }
+
   const missing = dataSource === 'firebase'
     ? requiredKeys.filter((key) => {
         const value = env[key]?.trim();

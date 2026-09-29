@@ -23,6 +23,10 @@ export default function RootLayout() {
             <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen name="(customer)" options={{ headerShown: false }} />
             <Stack.Screen
+              name="order-confirmation"
+              options={{ title: 'Demo Order Confirmation', headerBackTitle: 'Back' }}
+            />
+            <Stack.Screen
               name="loyalty/index"
               options={{ title: 'Loyalty & Rewards', headerBackTitle: 'Back' }}
             />

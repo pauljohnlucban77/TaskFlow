@@ -1,4 +1,12 @@
 {
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "demo",
+      "runtime": "nodejs22",
+      "ignore": ["node_modules", ".git", "*.log", "src", "tests", "scripts", "tsconfig.json"]
+    }
+  ],
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
@@ -6,6 +14,12 @@
   "emulators": {
     "firestore": {
       "port": 8080
+    },
+    "auth": {
+      "port": 9099
+    },
+    "functions": {
+      "port": 5001
     },
     "ui": {
       "enabled": false

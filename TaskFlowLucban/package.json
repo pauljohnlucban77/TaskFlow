@@ -2,6 +2,9 @@
   "name": "freds-pies-customer",
   "main": "expo-router/entry",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -49,7 +52,10 @@
     "check:env": "node scripts/check-env.js",
     "validate": "npm run check:env && npm run lint && npm run typecheck",
     "test": "node --test scripts/check-env.test.js scripts/service-error.test.js",
-    "test:rules": "firebase emulators:exec --only firestore --project demo-freds-pies-rules \"node --test scripts/firestore.rules.test.js\""
+    "test:rules": "firebase emulators:exec --only firestore --project freds-pies-demo-staging \"node --test scripts/firestore.rules.test.js\"",
+    "test:firebase": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,functions --project freds-pies-demo-staging \"node --test --test-concurrency=1 scripts/firestore.rules.test.js functions/tests/checkout-emulator.test.js\"",
+    "test:functions:unit": "npm --prefix functions run test:unit",
+    "seed:staging": "npm --prefix functions run seed:staging --"
   },
   "private": true
 }

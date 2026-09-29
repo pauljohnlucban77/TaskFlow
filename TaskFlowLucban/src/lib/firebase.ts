@@ -3,6 +3,7 @@ import 'firebase/firestore';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
+import { getFunctions, Functions } from 'firebase/functions';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -16,6 +17,7 @@ const firebaseConfig = {
 let app: any = null;
 let db: any = null;
 let authInstance: Auth | null = null;
+let functionsInstance: Functions | null = null;
 
 export function isFirebaseConfigured(): boolean {
   return !!(
@@ -36,6 +38,7 @@ if (isFirebaseConfigured()) {
   try {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     db = getFirestore(app);
+    functionsInstance = getFunctions(app, 'asia-east1');
     console.log('[Firebase] App & Firestore initialized successfully for Fred\'s Pies');
   } catch (err) {
     console.warn('[Firebase] App initialization warning:', err);
@@ -62,3 +65,4 @@ export function getFirebaseAuth(): Auth | null {
 }
 
 export { db, authInstance as auth };
+export { functionsInstance as functions };

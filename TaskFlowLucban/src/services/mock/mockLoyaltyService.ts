@@ -8,12 +8,14 @@ const delay = (ms = 300) => new Promise((res) => setTimeout(res, ms));
 // In-memory mock store
 const mockCustomers = new Map<string, LoyaltyCustomer>();
 const mockTransactions: LoyaltyTransaction[] = [];
-
 const GUEST_CUSTOMER_ID = 'mock-customer-123';
 
 export const mockLoyaltyService: LoyaltyService = {
   async getOrCreateCustomer(customerId: string, email: string, name = 'Valued Customer'): Promise<LoyaltyCustomer> {
     await delay(200);
+    if (customerId === GUEST_CUSTOMER_ID) {
+      return { customerId, name, email, points: 0, createdAt: new Date().toISOString() };
+    }
     if (!mockCustomers.has(customerId)) {
       mockCustomers.set(customerId, {
         customerId,
@@ -28,6 +30,7 @@ export const mockLoyaltyService: LoyaltyService = {
 
   async getCustomerBalance(customerId: string): Promise<number> {
     await delay(150);
+    if (customerId === GUEST_CUSTOMER_ID) return 0;
     const customer = mockCustomers.get(customerId);
     return customer ? customer.points : 0;
   },
@@ -51,10 +54,7 @@ export const mockLoyaltyService: LoyaltyService = {
     }
     const pointsEarned = calculatePointsEarned(purchaseAmount);
     let customer = mockCustomers.get(customerId);
-    if (!customer) {
-      customer = await this.getOrCreateCustomer(customerId, 'customer@fredspies.com');
-    }
-
+    if (!customer) customer = await this.getOrCreateCustomer(customerId, 'customer@fredspies.com');
     if (pointsEarned > 0) {
       customer.points += pointsEarned;
       mockTransactions.push({
@@ -66,7 +66,6 @@ export const mockLoyaltyService: LoyaltyService = {
         createdAt: new Date().toISOString(),
       });
     }
-
     return { pointsEarned, newBalance: customer.points };
   },
 
@@ -75,27 +74,15 @@ export const mockLoyaltyService: LoyaltyService = {
     if (customerId === GUEST_CUSTOMER_ID) {
       throw new Error('Create an account and buy a product before redeeming rewards.');
     }
-    const reward = mockRewards.find((r) => r.id === rewardId && r.active);
-    if (!reward) {
-      throw new Error('Reward not found or inactive');
+    const reward = mockRewards.find((candidate) => candidate.id === rewardId && candidate.active);
+    if (!reward) throw new Error('Reward not found or inactive.');
+    const customer = mockCustomers.get(customerId);
+    if (!customer || customer.points < reward.pointsRequired) {
+      throw new InsufficientPointsError(reward.name, reward.pointsRequired, customer?.points ?? 0);
     }
-
-    let customer = mockCustomers.get(customerId);
-    if (!customer) {
-      customer = await this.getOrCreateCustomer(customerId, 'customer@fredspies.com');
-    }
-
-    if (customer.points < reward.pointsRequired) {
-      throw new InsufficientPointsError(reward.name, reward.pointsRequired, customer.points);
-    }
-
-    const hasPurchase = mockTransactions.some((transaction) =>
-      transaction.customerId === customerId && transaction.type === 'earned'
-    );
-    if (!hasPurchase) {
+    if (!mockTransactions.some((transaction) => transaction.customerId === customerId && transaction.type === 'earned')) {
       throw new Error('Buy a product to earn points before redeeming rewards.');
     }
-
     customer.points -= reward.pointsRequired;
     mockTransactions.push({
       id: `tx-${Date.now()}`,
@@ -106,7 +93,6 @@ export const mockLoyaltyService: LoyaltyService = {
       rewardName: reward.name,
       createdAt: new Date().toISOString(),
     });
-
     return { newBalance: customer.points, reward };
   },
 };

@@ -2,10 +2,12 @@
 
 # dependencies
 node_modules/
+functions/lib/
 
 # Expo
 .expo/
 dist/
+.tmp-export-*/
 web-build/
 expo-env.d.ts
 

@@ -1,104 +1,48 @@
-# Fred's Pies Customer App — Final QA Report
+# Fred's Pies Private Demo QA Report
 
-## QA Summary
+## Release status
 
-Project: Fred's Pies Customer Mobile Application
+**Implementation is present, but tester release is blocked. This is not a production release or payment system.** The app has a staging-only simulated pickup checkout, customer order history, server-calculated totals, and atomic simulated points awards. Do not distribute it until Firebase rules and Functions emulator tests pass, a dedicated staging project is provisioned and deployed, and Android/iOS preview builds pass physical-device smoke checks.
 
-QA Status: PASS WITH MINOR ISSUES / READY FOR FINAL PRESENTATION WITH PHYSICAL DEVICE VERIFICATION
+## Implemented safeguards and flows
 
-- Critical Issues: 0
-- High Issues: 0
-- Medium Issues: 1
-- Low Issues: 1
+- Cloud Function requires authentication and a configured staging Firebase project whose ID ends in `-staging`.
+- The client submits product IDs, quantities, an optional code, and an idempotency request ID; Firestore product and promotion documents determine the order values.
+- Only active percentage-off and fixed-amount promotions are accepted, with discount applied to eligible lines.
+- The function creates a clearly labeled simulated order and awards points in one Firestore transaction. A retry with the same request ID returns the existing order.
+- Non-staging Expo development builds support a separate device-local preview order path so the cart-to-history UI can be exercised without writing to another Firebase project. These records do not sync and award no points; staging builds continue to use the callable Function.
+- Firestore clients cannot create/change orders or award points. Customers can read only their own order records.
+- Synthetic catalog seeding uses the Admin SDK and rejects project IDs that do not end in `-staging`.
+- EAS has a private preview profile for Android APK and iOS internal distribution.
 
-## Verified Results
+## Automated verification
 
-### Code and validation baseline
-- npm run validate passed
-- npm test -- --runInBand passed
-- 3 regression tests passed, 0 failed
+Run on 2026-09-30 in the project workspace:
 
-### Verified areas
-- Firebase config validation and fail-fast protection
-- Production vs development data source selection
-- Review form reset after submit/delete flow
-- TypeScript compile validation
-- Lint validation
-- Project release guardrails
+- **Pass:** `npm run validate` — environment validation, lint, and TypeScript passed with no lint warnings after removing unused variables from both product detail screens.
+- **Pass:** `npm test` — 8 tests passed.
+- **Pass:** `npm run test:functions:unit` — Functions compiled and all 6 checkout logic tests passed.
+- **Pass:** `npx expo export --platform android --output-dir .tmp-export-local-order-check` — Android bundle completed with the device-local order preview path included.
+- **Pass:** `npm --prefix functions ci` — Functions lockfile installs reproducibly.
+- **Pass:** `npm --prefix functions audit --omit=dev` — 0 runtime vulnerabilities.
+- **Pass:** `npx tsc -p functions/tsconfig.json --noEmit` — Functions type check passed.
+- **Pass:** `npx expo config --type public` — Expo configuration resolved with Android/iOS identifiers and version values.
+- **Pass:** `npx expo export --platform android --output-dir .tmp-export-verified` — Metro bundled the configured `src/app` route tree for Android. Metro discarded an incompatible old cache and completed a full crawl.
+- **Blocked:** `npm run test:firebase` — could not start: local Firebase CLI has no login and only Java 17 is installed; the installed Firebase CLI requires Java 21 or later. Install a supported JDK, authenticate the CLI, then rerun this test suite.
+- **Pass:** `npm --prefix functions audit --omit=dev` — 0 vulnerabilities after updating to Firebase Admin 14.5 and Functions 7.4, with a scoped Cloud Storage `gaxios` 7 override. Recheck this override with Firebase package updates.
+- **Not run:** Android/iOS cloud builds, physical installs, and device smoke tests; these require EAS credentials, iOS test-device provisioning, and the actual staging project.
 
-### Requires real device or live backend verification
-- Firebase authentication login/logout against live credentials
-- Firestore write/read validation for all user-owned documents
-- Real notification permission and push behavior
-- Signed Android/iOS production build testing
-- Final user acceptance testing on physical hardware
+## External release gates
 
-## Bug Summary
+- Create a dedicated billing-enabled Firebase staging project, ending `-staging`; enable email/password Auth, Firestore, Functions, and budget alerts. A staging project ID/config is not present in this repository yet.
+- The current local `.env` selects Firebase but points to a non-staging project and does not enable demo mode. Checkout intentionally refuses to run with that configuration. Replace it with the staging web config and set `EXPO_PUBLIC_DEMO_MODE=true`, then deploy `completeDemoCheckout` to that staging project.
+- Configure EAS `preview` variables with that project's Firebase web config; do not use production data or service-account keys in the app.
+- Deploy Firestore rules, indexes, and the staging-only function; seed synthetic catalog data and create demo Auth accounts.
+- Build and install signed private previews on physical Android and iOS devices. Test sign-in/out, browse, promo validation, unavailable product rejection, simulated checkout, idempotent retry, order history, balance refresh, and reward redemption.
+- Verify the demo UI never suggests a real charge or that the bakery received the order. Push notifications and real payment processing are out of scope.
 
-### Bug ID: QA-001
-Severity: HIGH
-Feature: Firebase production safety
-Screen: App startup / service selection
-Problem: The app could silently fall back to mock data when Firebase config was incomplete.
-Steps to Reproduce:
-1. Set the app to production mode with missing Firebase values.
-2. Launch the app.
-3. Observe mock fallback instead of a hard stop.
-Expected Result: Production should fail fast with a clear error.
-Actual Result: The app could look functional while using mocked data.
-Root Cause: Missing production guard in Firebase initialization.
-Fix Applied: Added fail-fast config checks in the Firebase runtime layer and service selection logic.
-Retest Result: Passed through env validation and tests.
-Status: RESOLVED
+## Known limitations
 
-### Bug ID: QA-002
-Severity: HIGH
-Feature: Product review flow
-Screen: Product Details
-Problem: Review state could remain stale after a successful review submission.
-Steps to Reproduce:
-1. Open a product detail page.
-2. Add rating and comment.
-3. Submit.
-4. Observe whether the form resets.
-Expected Result: Rating, comment, and edit state are cleared after submission.
-Actual Result: Previous values could stay visible.
-Root Cause: Missing reset logic after save.
-Fix Applied: Reset the form state after successful save and delete actions.
-Retest Result: Verified in code review and project validation.
-Status: RESOLVED
-
-### Bug ID: QA-003
-Severity: LOW
-Feature: Project structure hygiene
-Screen: Project root
-Problem: Duplicate active app routing patterns create confusion during production maintenance.
-Expected Result: One clean active app entry and a minimal route structure.
-Actual Result: Legacy files remain in the repository and may cause confusion.
-Root Cause: Older template leftovers.
-Fix Applied: No functional fix required; this is a cleanup item only.
-Status: MONITOR
-
-## Fixes Applied
-
-- Firebase runtime guard in src/lib/firebase.ts
-- Service selection enforcement in src/services/index.ts
-- Review reset logic in src/app/products/[id].tsx
-- Environment validation in scripts/check-env.js
-- Regression tests in scripts/check-env.test.js
-
-## Remaining Issues
-
-### Can be fixed in code
-- Legacy duplicate project structure cleanup, if desired
-
-### Requires physical-device or project environment
-- Real Firebase login/logout verification
-- Real Firestore data integrity verification
-- Notification permission and push testing
-- Signed Android or iOS release build validation
-- Final customer acceptance on physical devices
-
-## Final Presentation Readiness
-
-The project is now in a strong demo-to-deploy state and is suitable for final presentation with the noted caveat that live Firebase and mobile-device validation must still be completed in the actual target environment.
+- Simulated orders are not sent to bakery staff and do not represent real paid orders.
+- Loyalty awards in this demo are tied only to the trusted simulated-success function and must not be reused as production payment verification.
+- Firebase project creation, billing, EAS credentials, tester device provisioning, deployment, and physical-device verification require project-owner accounts and have not been performed by source changes.

@@ -36,7 +36,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const existing = prev.find((i) => i.product.id === product.id);
       if (existing) {
         return prev.map((i) =>
-          i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
+          i.product.id === product.id ? { ...i, quantity: Math.min(i.quantity + 1, 20) } : i
         );
       }
       return [...prev, { product, quantity: 1 }];
@@ -53,7 +53,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     setItems((prev) =>
-      prev.map((i) => (i.product.id === productId ? { ...i, quantity } : i))
+      prev.map((i) => (i.product.id === productId ? { ...i, quantity: Math.min(quantity, 20) } : i))
     );
   };
 
@@ -72,17 +72,25 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const discount = useMemo(() => {
     if (!appliedPromotion) return 0;
     const value = appliedPromotion.discountValue || 0;
+    const productIds = appliedPromotion.applicableProductIds ?? [];
+    const categoryIds = appliedPromotion.applicableCategoryIds ?? [];
+    const eligibleSubtotal = items.reduce((sum, item) => {
+      const eligible = productIds.length === 0 && categoryIds.length === 0
+        ? true
+        : productIds.includes(item.product.id) || categoryIds.includes(item.product.category);
+      return sum + (eligible ? item.product.price * item.quantity : 0);
+    }, 0);
 
     if (appliedPromotion.type === 'percent_off') {
-      return subtotal * (value / 100);
+      return eligibleSubtotal * (value / 100);
     }
 
     if (appliedPromotion.type === 'amount_off') {
-      return Math.min(subtotal, value);
+      return Math.min(eligibleSubtotal, value);
     }
 
     return 0;
-  }, [appliedPromotion, subtotal]);
+  }, [appliedPromotion, items]);
 
   const total = useMemo(() => Math.max(0, subtotal - discount), [subtotal, discount]);
 
@@ -100,28 +108,25 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const promo = promotions.find((candidate) => {
       const matchesCode = candidate.code?.trim().toUpperCase() === normalizedCode;
       if (!matchesCode || !candidate.active) return false;
+      if (candidate.type !== 'percent_off' && candidate.type !== 'amount_off') return false;
+      if (!Number.isFinite(candidate.discountValue) || (candidate.discountValue ?? 0) <= 0) return false;
+      if (candidate.type === 'percent_off' && (candidate.discountValue ?? 0) > 100) return false;
 
       const now = Date.now();
       const startsAt = candidate.startsAt ? new Date(candidate.startsAt).getTime() : Number.NEGATIVE_INFINITY;
       const endsAt = candidate.endsAt ? new Date(candidate.endsAt).getTime() : Number.POSITIVE_INFINITY;
 
       if (now < startsAt || now > endsAt) return false;
-      if (candidate.minSpend && subtotal < candidate.minSpend) return false;
+      if (candidate.minSpend !== undefined
+          && (!Number.isFinite(candidate.minSpend) || candidate.minSpend < 0 || subtotal < candidate.minSpend)) return false;
 
-      const cartProductIds = items.map((item) => item.product.id);
-      const cartCategories = items.map((item) => item.product.category);
       const includedProductIds = candidate.applicableProductIds ?? [];
       const includedCategories = candidate.applicableCategoryIds ?? [];
 
-      if (includedProductIds.length > 0) {
-        return includedProductIds.some((productId) => cartProductIds.includes(productId));
-      }
-
-      if (includedCategories.length > 0) {
-        return includedCategories.some((categoryId) => cartCategories.includes(categoryId));
-      }
-
-      return true;
+      const hasRestrictions = includedProductIds.length > 0 || includedCategories.length > 0;
+      return items.some((item) => (!hasRestrictions
+        || includedProductIds.includes(item.product.id)
+        || includedCategories.includes(item.product.category)));
     });
 
     if (!promo) {

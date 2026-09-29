@@ -8,7 +8,9 @@
     "scheme": "fredspies",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.fredspies.customer",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +20,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.fredspies.customer"
+      "package": "com.fredspies.customer",
+      "versionCode": 1
     },
     "web": {
       "output": "static",

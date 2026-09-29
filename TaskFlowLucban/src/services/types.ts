@@ -3,6 +3,7 @@ import { Promotion } from '../types/promotion';
 import { Announcement } from '../types/announcement';
 import { LoyaltyCustomer, Reward, LoyaltyTransaction } from '../types/loyalty';
 import { FeedbackItem, FeedbackInput } from '../types/feedback';
+import { CustomerOrder, DemoCheckoutRequest, DemoCheckoutResult, LocalDemoCheckoutPreview } from '../types/order';
 
 export interface ProductService {
   getProducts(): Promise<Product[]>;
@@ -31,6 +32,11 @@ export interface LoyaltyService {
   getTransactionHistory(customerId: string): Promise<LoyaltyTransaction[]>;
   earnPoints(customerId: string, purchaseAmount: number): Promise<{ pointsEarned: number; newBalance: number }>;
   redeemReward(customerId: string, rewardId: string): Promise<{ newBalance: number; reward: Reward }>;
+}
+
+export interface OrderService {
+  completeDemoCheckout(request: DemoCheckoutRequest, localPreview?: LocalDemoCheckoutPreview): Promise<DemoCheckoutResult>;
+  getMyOrders(customerId: string): Promise<CustomerOrder[]>;
 }
 
 export interface FeedbackService {

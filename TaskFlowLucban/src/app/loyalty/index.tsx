@@ -5,9 +5,7 @@ import {
   View,
   ScrollView,
   RefreshControl,
-  Alert,
   ActivityIndicator,
-  TextInput,
   Pressable,
 } from 'react-native';
 import { useLoyalty } from '../../hooks/useLoyalty';
@@ -22,14 +20,12 @@ import { Reward, InsufficientPointsError } from '../../types/loyalty';
 import { Colors } from '../../constants/colors';
 import { Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
-import { formatPrice } from '../../utils/formatPrice';
 
 export default function LoyaltyScreen() {
   const { user } = useAuth();
-  const { balance, account, rewards, history, loading, error, redeemingId, hasPurchased, refresh, redeem, earn } = useLoyalty();
+  const { balance, account, rewards, history, loading, error, redeemingId, hasPurchased, refresh, redeem } = useLoyalty();
+  const canUseRewards = Boolean(user && hasPurchased);
   const [refreshing, setRefreshing] = useState(false);
-  const [simulatedAmount, setSimulatedAmount] = useState('250');
-  const [simulating, setSimulating] = useState(false);
   const [pendingReward, setPendingReward] = useState<Reward | null>(null);
   const [redemptionMessage, setRedemptionMessage] = useState<{
     title: string;
@@ -80,32 +76,6 @@ export default function LoyaltyScreen() {
   };
 
 
-  const handleSimulateEarn = async () => {
-    const amount = parseFloat(simulatedAmount);
-    if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid purchase amount greater than 0.');
-      return;
-    }
-
-    try {
-      setSimulating(true);
-      const res = await earn(amount);
-      if (res.pointsEarned === 0) {
-        Alert.alert('No Points Earned', `A purchase of ${formatPrice(amount)} is too small to earn points. Minimum spend is ₱100.`);
-      } else {
-        Alert.alert(
-          'Points Awarded! 🌟',
-          `Earned +${res.pointsEarned} points for purchase of ${formatPrice(amount)}!\nNew balance: ${res.newBalance} pts.`
-        );
-      }
-    } catch (e: any) {
-      Alert.alert('Error', e.message || 'Failed to simulate purchase.');
-    } finally {
-      setSimulating(false);
-    }
-  };
-
-
   return (
     <ScrollView
       style={styles.container}
@@ -132,7 +102,7 @@ export default function LoyaltyScreen() {
             </Pressable>
             <Pressable
               onPress={() => void processRedemption(pendingReward)}
-              disabled={!user || !hasPurchased || redeemingId === pendingReward.id}
+              disabled={!canUseRewards || redeemingId === pendingReward.id}
               style={({ pressed }) => [styles.confirmButton, pressed && styles.pressed]}
               accessibilityRole="button"
             >
@@ -162,37 +132,6 @@ export default function LoyaltyScreen() {
         </View>
       )}
 
-      {__DEV__ && user && (
-        <View style={styles.devCard}>
-          <Text style={styles.devTitle}>🛠️ Simulate Purchase (Staff Test)</Text>
-          <Text style={styles.devSubtitle}>
-            Test earning points: ₱100 = 1 pt (e.g. ₱250 = +2 pts, ₱99 = 0 pts).
-          </Text>
-
-          <View style={styles.devInputRow}>
-            <Text style={styles.currencyPrefix}>₱</Text>
-            <TextInput
-              style={styles.devInput}
-              value={simulatedAmount}
-              onChangeText={setSimulatedAmount}
-              keyboardType="numeric"
-              placeholder="Amount"
-            />
-            <Pressable
-              onPress={handleSimulateEarn}
-              disabled={simulating}
-              style={({ pressed }) => [styles.devButton, pressed && styles.pressed]}
-            >
-              {simulating ? (
-                <ActivityIndicator size="small" color={Colors.white} />
-              ) : (
-                <Text style={styles.devButtonText}>Simulate</Text>
-              )}
-            </Pressable>
-          </View>
-        </View>
-      )}
-
       {error && !loading ? (
         <ErrorState message={error} onRetry={refresh} />
       ) : (
@@ -219,7 +158,7 @@ export default function LoyaltyScreen() {
                 key={reward.id}
                 reward={reward}
                 userPoints={balance}
-                onRedeem={user && hasPurchased ? handleRedeemPress : () => {}}
+                onRedeem={canUseRewards ? handleRedeemPress : () => {}}
                 isRedeeming={redeemingId === reward.id}
               />
             ))

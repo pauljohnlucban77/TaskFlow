@@ -18,7 +18,7 @@ const {
   updateDoc,
 } = require('firebase/firestore');
 
-const projectId = 'demo-freds-pies-rules';
+const projectId = 'freds-pies-demo-staging';
 let testEnvironment;
 
 before(async () => {
@@ -74,6 +74,16 @@ test('users cannot raise their own points or modify role', async () => {
   await assertFails(updateDoc(doc(db, 'customers/alice'), { role: 'admin' }));
 });
 
+test('signed-in clients cannot create their own profile or starting points', async () => {
+  const db = testEnvironment.authenticatedContext('new-customer', {
+    email: 'new-customer@example.com',
+  }).firestore();
+  await assertFails(setDoc(doc(db, 'customers/new-customer'), {
+    name: 'New Customer', email: 'new-customer@example.com', points: 0,
+    createdAt: serverTimestamp(),
+  }));
+});
+
 test('client point-award transactions are denied', async () => {
   const db = testEnvironment.authenticatedContext('alice', {
     email: 'alice@example.com',
@@ -95,6 +105,16 @@ test('catalog writes are denied to authenticated clients', async () => {
   }).firestore();
   await assertFails(setDoc(doc(db, 'products/attacker-product'), {
     name: 'Fake Product', price: 0,
+  }));
+});
+
+test('clients cannot create or change an order or simulated payment status', async () => {
+  const db = testEnvironment.authenticatedContext('alice', {
+    email: 'alice@example.com',
+  }).firestore();
+  await assertFails(setDoc(doc(db, 'orders/fake-order'), {
+    customerId: 'alice', status: 'demo_confirmed', paymentStatus: 'simulated_success',
+    paymentMode: 'simulated', total: 1, createdAt: serverTimestamp(),
   }));
 });
 

@@ -18,5 +18,18 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "functions",
+    "src/components",
+    "src/constants",
+    "src/context",
+    "src/data",
+    "src/hooks",
+    "src/lib",
+    "src/services",
+    "src/types",
+    "src/utils"
   ]
 }

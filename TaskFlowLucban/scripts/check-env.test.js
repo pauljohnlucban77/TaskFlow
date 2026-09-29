@@ -93,3 +93,15 @@ test('shell values override values from .env, matching Expo precedence', () => {
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.match(result.stdout, /OK: dataSource=firebase/);
 });
+
+test('demo builds reject Firebase project IDs that are not staging projects', () => {
+  const result = runCheck({
+    shellValues: {
+      ...validFirebaseValues,
+      EXPO_PUBLIC_DEMO_MODE: 'true',
+    },
+  });
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /ending in "-staging"/);
+});

@@ -9,7 +9,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { productService } from '../../src/services';
@@ -29,9 +29,8 @@ import { MAX_COMMENT_LENGTH, validateFeedback } from '../../src/utils/validateFe
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
   const { addItem } = useCart();
-  const { customerId, customerName, isAuthenticated } = useCurrentCustomer();
+  const { customerId, customerName } = useCurrentCustomer();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
