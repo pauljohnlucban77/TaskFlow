@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { loyaltyService } from '../services';
-import { mockLoyaltyService } from '../services/mock/mockLoyaltyService';
+import { getRuntimeDataSource } from '../lib/firebase';
 import { Reward, LoyaltyTransaction, InsufficientPointsError, calculateLoyaltyAccount } from '../types/loyalty';
 import { useAuth } from '../context/AuthContext';
 
@@ -17,7 +17,8 @@ export function useLoyalty() {
 
   const activeUid = uid;
   const activeEmail = email;
-  const activeLoyaltyService = isMockUser ? mockLoyaltyService : loyaltyService;
+  const demoMode = getRuntimeDataSource() === 'mock';
+  const activeLoyaltyService = loyaltyService;
   const customerName = activeEmail ? activeEmail.split('@')[0] : 'Valued Customer';
 
   const account = useMemo(() => {
@@ -40,7 +41,7 @@ export function useLoyalty() {
       setError(null);
 
       const customer = await activeLoyaltyService.getOrCreateCustomer(activeUid, activeEmail || 'customer@fredspies.com');
-      setBalance(isMockUser ? 0 : (customer ? customer.points : 0));
+      setBalance(customer ? customer.points : 0);
 
       const [rList, hList] = await Promise.all([
         activeLoyaltyService.getActiveRewards(),
@@ -63,7 +64,7 @@ export function useLoyalty() {
   }, [loadLoyaltyData]);
 
   const redeem = async (reward: Reward) => {
-    if (isMockUser || !user) {
+    if (!demoMode && (isMockUser || !user)) {
       throw new Error('Create an account and buy a product before redeeming rewards.');
     }
     if (!hasPurchased) {
@@ -96,7 +97,7 @@ export function useLoyalty() {
   };
 
   const earn = async (purchaseAmount: number) => {
-    if (isMockUser || !user) {
+    if (!demoMode && (isMockUser || !user)) {
       throw new Error('Create an account and buy a product to earn points.');
     }
 

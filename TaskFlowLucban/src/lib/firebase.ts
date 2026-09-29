@@ -25,15 +25,11 @@ export function isFirebaseConfigured(): boolean {
   );
 }
 
-export function getRuntimeDataSource(): 'mock' | 'firebase' {
-  const requestedSource = process.env.EXPO_PUBLIC_DATA_SOURCE || 'mock';
-  if (requestedSource !== 'firebase') {
-    return 'mock';
-  }
-  if (!isFirebaseConfigured()) {
-    return 'mock';
-  }
-  return 'firebase';
+export function getRuntimeDataSource(): 'mock' | 'firebase' | null {
+  const requestedSource = process.env.EXPO_PUBLIC_DATA_SOURCE;
+  return requestedSource === 'mock' || requestedSource === 'firebase'
+    ? requestedSource
+    : null;
 }
 
 if (isFirebaseConfigured()) {

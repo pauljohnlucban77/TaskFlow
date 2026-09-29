@@ -1,3 +1,7 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const dotenv = require('dotenv');
+
 const requiredKeys = [
   'EXPO_PUBLIC_FIREBASE_API_KEY',
   'EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN',
@@ -7,27 +11,56 @@ const requiredKeys = [
   'EXPO_PUBLIC_FIREBASE_APP_ID',
 ];
 
-const dataSource = process.env.EXPO_PUBLIC_DATA_SOURCE || 'mock';
-const isProduction = process.env.NODE_ENV === 'production';
-const missing = requiredKeys.filter((key) => {
-  const value = process.env[key];
-  return !value || value === 'your_api_key_here' || value.includes('your_');
-});
+function loadEnvironment(env = process.env, envPath = path.resolve(process.cwd(), '.env')) {
+  if (!fs.existsSync(envPath)) return env;
 
-if (dataSource === 'firebase' && isProduction && missing.length > 0) {
-  console.error(
-    '[Env Check] Firebase is required in production, but the following values are missing or invalid: ' +
-      missing.join(', ')
-  );
-  process.exit(1);
+  const fileValues = dotenv.parse(fs.readFileSync(envPath));
+  for (const [key, value] of Object.entries(fileValues)) {
+    if (env[key] === undefined) env[key] = value;
+  }
+  return env;
 }
 
-if (dataSource === 'firebase' && missing.length > 0) {
-  console.warn(
-    '[Env Check] Firebase is enabled but some values are missing. Using local mock fallback in non-production mode.'
-  );
+function validateEnvironment(env) {
+  const errors = [];
+  const dataSource = env.EXPO_PUBLIC_DATA_SOURCE;
+
+  if (dataSource !== 'mock' && dataSource !== 'firebase') {
+    errors.push('EXPO_PUBLIC_DATA_SOURCE must be explicitly set to "mock" or "firebase"');
+  }
+
+  if (env.NODE_ENV === 'production' && dataSource !== 'firebase') {
+    errors.push('EXPO_PUBLIC_DATA_SOURCE must be "firebase" in production');
+  }
+
+  const missing = dataSource === 'firebase'
+    ? requiredKeys.filter((key) => {
+        const value = env[key]?.trim();
+        return !value || value.includes('your_');
+      })
+    : [];
+
+  if (missing.length > 0) {
+    errors.push(`Firebase values are missing or placeholders: ${missing.join(', ')}`);
+  }
+
+  return { dataSource, missing, errors };
 }
 
-console.log(
-  `[Env Check] OK: dataSource=${dataSource}, production=${String(isProduction)}, missing=${missing.length}`
-);
+function main(env = process.env, envPath = path.resolve(process.cwd(), '.env')) {
+  loadEnvironment(env, envPath);
+  const result = validateEnvironment(env);
+
+  if (result.errors.length > 0) {
+    console.error(`[Env Check] Invalid environment: ${result.errors.join('; ')}`);
+    process.exitCode = 1;
+    return result;
+  }
+
+  console.log(`[Env Check] OK: dataSource=${result.dataSource}`);
+  return result;
+}
+
+if (require.main === module) main();
+
+module.exports = { requiredKeys, loadEnvironment, validateEnvironment, main };

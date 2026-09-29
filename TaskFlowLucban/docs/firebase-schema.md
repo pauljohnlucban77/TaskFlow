@@ -63,6 +63,7 @@
 - `email` (string)
 - `points` (number): non-negative integer
 - `createdAt` (Timestamp)
+- `lastRedemptionId` (string, optional): transaction ID paired with the latest atomic client redemption
 
 ### 6. `rewards`
 - `id` (Document ID / string)
@@ -119,3 +120,7 @@
 6. Deploy `firestore.rules` using the Firebase CLI or paste them in the Firestore Rules tab.
 7. To test staff features (earning points), create a document in `staff/{YOUR_AUTH_UID}` in the Firestore console.
 8. Restart the development server with cache cleared: `npx expo start -c`.
+
+## Spark Plan Loyalty Tradeoff
+
+On the Spark plan, client-side earning from a submitted purchase amount is not trustworthy: Firestore Rules cannot verify that the purchase was actually paid. Firebase-mode point awards are therefore disabled in the client. Authorized staff must grant verified points through a trusted administrative channel. Reward redemption remains available through an atomic transaction whose paired customer balance debit and transaction record are validated by Firestore Rules. No direct client point increases or transaction-ledger edits are allowed.

@@ -40,9 +40,17 @@ export default function HomeScreen() {
     urgentDismissed,
     dismissUrgent,
     announcements,
+    error: announcementsError,
+    refresh: refreshAnnouncements,
   } = useAnnouncements();
 
-  const { balance, account, hasPurchased } = useLoyalty();
+  const {
+    balance,
+    account,
+    hasPurchased,
+    error: loyaltyError,
+    refresh: refreshLoyalty,
+  } = useLoyalty();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
@@ -181,6 +189,13 @@ export default function HomeScreen() {
             onClear={() => setSearchQuery('')}
           />
         </View>
+
+        {!error && loyaltyError && (
+          <ErrorState
+            message={loyaltyError}
+            onRetry={() => void refreshLoyalty()}
+          />
+        )}
 
         {error ? (
           <ErrorState message={error} onRetry={loadData} />
@@ -354,7 +369,12 @@ export default function HomeScreen() {
                 actionText="See all"
                 onActionPress={() => router.push('/announcements' as any)}
               />
-              {announcements.slice(0, 2).map((ann) => (
+              {announcementsError ? (
+                <ErrorState
+                  message={announcementsError}
+                  onRetry={() => void refreshAnnouncements()}
+                />
+              ) : announcements.slice(0, 2).map((ann) => (
                 <Pressable
                   key={ann.id}
                   onPress={() => router.push(`/announcements/${ann.id}` as any)}

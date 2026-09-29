@@ -32,6 +32,7 @@ src/
    ```bash
    cp .env.example .env
    ```
+  The local `.env` file is ignored by Git. Restrict the Firebase API key in Google Cloud Console to the actual app/domain and only the APIs the app needs; never put service-account credentials in the client app.
 3. Start the development server:
    ```bash
    npx expo start

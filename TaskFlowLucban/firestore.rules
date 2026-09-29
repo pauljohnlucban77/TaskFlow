@@ -1,38 +1,174 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
 
-    // Catalog collections (Public Read & Write for Demo/Setup)
+    function owns(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function activeRewardMatches(rewardId, points, rewardName) {
+      let rewardPath = /databases/$(database)/documents/rewards/$(rewardId);
+      return rewardId is string
+        && exists(rewardPath)
+        && get(rewardPath).data.active == true
+        && get(rewardPath).data.pointsRequired == points
+        && get(rewardPath).data.name == rewardName;
+    }
+
+    function linkedRedemption(customerId, transactionId, oldBalance, newBalance) {
+      let transactionPath = /databases/$(database)/documents/loyalty_transactions/$(transactionId);
+      return transactionId is string
+        && !exists(transactionPath)
+        && existsAfter(transactionPath)
+        && getAfter(transactionPath).data.customerId == customerId
+        && getAfter(transactionPath).data.type == 'redeemed'
+        && getAfter(transactionPath).data.points == oldBalance - newBalance
+        && activeRewardMatches(
+          getAfter(transactionPath).data.rewardId,
+          getAfter(transactionPath).data.points,
+          getAfter(transactionPath).data.rewardName
+        );
+    }
+
+    function validCustomerCreate(userId) {
+      return owns(userId)
+        && request.resource.data.keys().hasOnly(['name', 'email', 'points', 'createdAt'])
+        && request.resource.data.keys().hasAll(['name', 'email', 'points', 'createdAt'])
+        && request.resource.data.name is string
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.points == 0
+        && request.resource.data.createdAt == request.time;
+    }
+
+    function validProfileUpdate(userId) {
+      return owns(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email'])
+        && request.resource.data.name is string
+        && request.resource.data.email == request.auth.token.email;
+    }
+
+    function validRedemptionDebit(userId) {
+      return owns(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['points', 'lastRedemptionId'])
+        && resource.data.points is int
+        && request.resource.data.points is int
+        && request.resource.data.points >= 0
+        && request.resource.data.points < resource.data.points
+        && request.resource.data.lastRedemptionId is string
+        && linkedRedemption(
+          userId,
+          request.resource.data.lastRedemptionId,
+          resource.data.points,
+          request.resource.data.points
+        );
+    }
+
+    function validRedemptionTransaction(transactionId) {
+      let customerId = request.resource.data.customerId;
+      let customerPath = /databases/$(database)/documents/customers/$(customerId);
+      return owns(customerId)
+        && request.resource.data.keys().hasOnly([
+          'customerId', 'type', 'points', 'rewardId', 'rewardName', 'createdAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'customerId', 'type', 'points', 'rewardId', 'rewardName', 'createdAt'
+        ])
+        && request.resource.data.type == 'redeemed'
+        && request.resource.data.points is int
+        && request.resource.data.points > 0
+        && request.resource.data.createdAt == request.time
+        && activeRewardMatches(
+          request.resource.data.rewardId,
+          request.resource.data.points,
+          request.resource.data.rewardName
+        )
+        && exists(customerPath)
+        && getAfter(customerPath).data.lastRedemptionId == transactionId
+        && getAfter(customerPath).data.points
+          == get(customerPath).data.points - request.resource.data.points;
+    }
+
     match /categories/{categoryId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if false;
     }
 
     match /products/{productId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if false;
     }
 
-    match /promotions/{promoId} {
-      allow read, write: if true;
+    match /promotions/{promotionId} {
+      allow read: if true;
+      allow write: if false;
     }
 
     match /announcements/{announcementId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if false;
     }
 
     match /rewards/{rewardId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if false;
     }
 
     match /customers/{customerId} {
-      allow read, write: if true;
+      allow read: if owns(customerId);
+      allow create: if validCustomerCreate(customerId);
+      allow update: if validProfileUpdate(customerId) || validRedemptionDebit(customerId);
+      allow delete: if false;
     }
 
-    match /loyalty_transactions/{txId} {
-      allow read, write: if true;
+    match /loyalty_transactions/{transactionId} {
+      allow read: if owns(resource.data.customerId);
+      allow create: if validRedemptionTransaction(transactionId);
+      allow update, delete: if false;
     }
 
     match /feedback/{feedbackId} {
-      allow read, write: if true;
+      allow read: if owns(resource.data.customerId);
+      allow create: if owns(request.resource.data.customerId)
+        && request.resource.data.keys().hasOnly([
+          'customerId', 'customerName', 'rating', 'comment', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.comment is string
+        && request.resource.data.comment.size() > 0
+        && request.resource.data.comment.size() <= 500
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if owns(resource.data.customerId)
+        && request.resource.data.customerId == resource.data.customerId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'rating', 'comment', 'updatedAt'
+        ])
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.comment is string
+        && request.resource.data.comment.size() > 0
+        && request.resource.data.comment.size() <= 500
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if owns(resource.data.customerId);
+    }
+
+    match /orders/{orderId} {
+      allow read: if owns(resource.data.customerId);
+      allow create: if owns(request.resource.data.customerId)
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

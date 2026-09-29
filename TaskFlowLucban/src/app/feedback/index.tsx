@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, FlatList, Text, Pressable, RefreshControl } from 'react-native';
+import { StyleSheet, View, FlatList, Text, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useFeedback } from '../../hooks/useFeedback';
@@ -11,10 +11,12 @@ import { FeedbackItem } from '../../types/feedback';
 import { Colors } from '../../constants/colors';
 import { Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
+import { getCollectionState } from '../../utils/collectionState';
 
 export default function MyFeedbackScreen() {
   const router = useRouter();
   const { feedbackList, loading, error, refresh, deleteFeedbackItem } = useFeedback();
+  const listState = getCollectionState(feedbackList, loading, error);
   const [refreshing, setRefreshing] = useState(false);
   const [deletingItem, setDeletingItem] = useState<FeedbackItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -58,9 +60,13 @@ export default function MyFeedbackScreen() {
         <Text style={styles.newButtonText}>Give New Feedback</Text>
       </Pressable>
 
-      {error && !loading ? (
-        <ErrorState message={error} onRetry={refresh} />
-      ) : feedbackList.length === 0 && !loading ? (
+      {listState === 'loading' ? (
+        <View style={styles.loadingState}>
+          <ActivityIndicator color={Colors.primary} />
+        </View>
+      ) : listState === 'error' ? (
+        <ErrorState message={error || 'Failed to load feedback.'} onRetry={refresh} />
+      ) : listState === 'empty' ? (
         <EmptyState
           icon="chatbubbles-outline"
           title="No feedback shared yet"
@@ -123,5 +129,10 @@ const styles = StyleSheet.create({
   listContent: {
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.xxl,
+  },
+  loadingState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

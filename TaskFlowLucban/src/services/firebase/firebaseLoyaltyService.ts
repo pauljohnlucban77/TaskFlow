@@ -13,17 +13,12 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { mapReward } from './mappers';
-import { mockLoyaltyService } from '../mock/mockLoyaltyService';
-import { calculatePointsEarned } from '../../utils/loyalty';
+import { ServiceError, runFirestore } from '../serviceError';
 
 export const firebaseLoyaltyService: LoyaltyService = {
   async getOrCreateCustomer(customerId: string, email: string, name = 'Valued Customer'): Promise<LoyaltyCustomer> {
-    if (customerId === 'mock-customer-123') {
-      return mockLoyaltyService.getOrCreateCustomer(customerId, email, name);
-    }
-    if (!db) return mockLoyaltyService.getOrCreateCustomer(customerId, email, name);
-    try {
-      const docRef = doc(db, 'customers', customerId);
+    return runFirestore(db, 'load customer loyalty profile', async (firestore) => {
+      const docRef = doc(firestore, 'customers', customerId);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
@@ -51,47 +46,33 @@ export const firebaseLoyaltyService: LoyaltyService = {
           createdAt: new Date().toISOString(),
         };
       }
-    } catch (e) {
-      console.warn('[Firebase] getOrCreateCustomer error, falling back to mock:', e);
-      return mockLoyaltyService.getOrCreateCustomer(customerId, email, name);
-    }
+    });
   },
 
   async getCustomerBalance(customerId: string): Promise<number> {
-    if (!db) return mockLoyaltyService.getCustomerBalance(customerId);
-    try {
-      const docRef = doc(db, 'customers', customerId);
+    return runFirestore(db, 'load points balance', async (firestore) => {
+      const docRef = doc(firestore, 'customers', customerId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         return docSnap.data().points || 0;
       }
       return 0;
-    } catch (e) {
-      console.warn('[Firebase] getCustomerBalance error, falling back to mock:', e);
-      return mockLoyaltyService.getCustomerBalance(customerId);
-    }
+    });
   },
 
   async getActiveRewards(): Promise<Reward[]> {
-    if (!db) return mockLoyaltyService.getActiveRewards();
-    try {
-      const q = query(collection(db, 'rewards'), where('active', '==', true));
+    return runFirestore(db, 'load rewards', async (firestore) => {
+      const q = query(collection(firestore, 'rewards'), where('active', '==', true));
       const snapshot = await getDocs(q);
-      const list = snapshot.docs.map((d: any) => mapReward(d.id, d.data()));
-      if (list.length === 0) return mockLoyaltyService.getActiveRewards();
-      return list;
-    } catch (e) {
-      console.warn('[Firebase] getActiveRewards error, falling back to mock:', e);
-      return mockLoyaltyService.getActiveRewards();
-    }
+      return snapshot.docs.map((d: any) => mapReward(d.id, d.data()));
+    });
   },
 
   async getTransactionHistory(customerId: string): Promise<LoyaltyTransaction[]> {
-    if (!db) return mockLoyaltyService.getTransactionHistory(customerId);
-    try {
+    return runFirestore(db, 'load points history', async (firestore) => {
       // Query by customerId without orderBy to avoid requiring a composite index in Firestore
       const q = query(
-        collection(db, 'loyalty_transactions'),
+        collection(firestore, 'loyalty_transactions'),
         where('customerId', '==', customerId)
       );
       const snapshot = await getDocs(q);
@@ -110,85 +91,30 @@ export const firebaseLoyaltyService: LoyaltyService = {
       });
       // Sort in memory by createdAt desc
       return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    } catch (e) {
-      console.warn('[Firebase] getTransactionHistory error, falling back to mock:', e);
-      return mockLoyaltyService.getTransactionHistory(customerId);
-    }
+    });
   },
 
   async earnPoints(customerId: string, purchaseAmount: number): Promise<{ pointsEarned: number; newBalance: number }> {
-    if (customerId === 'mock-customer-123') {
-      throw new Error('Create an account and buy a product to earn points.');
-    }
-    if (!db) return mockLoyaltyService.earnPoints(customerId, purchaseAmount);
-    const pointsEarned = calculatePointsEarned(purchaseAmount);
-    if (pointsEarned <= 0) {
-      const current = await this.getCustomerBalance(customerId);
-      return { pointsEarned: 0, newBalance: current };
-    }
-
-    try {
-      const customerRef = doc(db, 'customers', customerId);
-      const txRef = doc(collection(db, 'loyalty_transactions'));
-
-      let updatedBalance = 0;
-
-      await runTransaction(db, async (transaction) => {
-        const customerSnap = await transaction.get(customerRef);
-        let currentPoints = 0;
-        if (customerSnap.exists()) {
-          currentPoints = customerSnap.data().points || 0;
-        } else {
-          transaction.set(customerRef, {
-            name: 'Valued Customer',
-            email: '',
-            points: 0,
-            createdAt: serverTimestamp(),
-          });
-        }
-
-        updatedBalance = currentPoints + pointsEarned;
-
-        transaction.update(customerRef, { points: updatedBalance });
-        transaction.set(txRef, {
-          customerId,
-          type: 'earned',
-          points: pointsEarned,
-          purchaseAmount,
-          createdAt: serverTimestamp(),
-        });
-      });
-
-      return { pointsEarned, newBalance: updatedBalance };
-    } catch (e) {
-      console.warn('[Firebase] earnPoints transaction failed, falling back to mock:', e);
-      return mockLoyaltyService.earnPoints(customerId, purchaseAmount);
-    }
+    void customerId;
+    void purchaseAmount;
+    throw new ServiceError(
+      'loyalty/staff-grant-required',
+      'Points are granted by Fred\'s Pies staff after purchase verification.'
+    );
   },
 
   async redeemReward(customerId: string, rewardId: string): Promise<{ newBalance: number; reward: Reward }> {
-    if (!db) return mockLoyaltyService.redeemReward(customerId, rewardId);
-
-    try {
-      const customerRef = doc(db, 'customers', customerId);
-      const rewardRef = doc(db, 'rewards', rewardId);
-      const txRef = doc(collection(db, 'loyalty_transactions'));
-      const earnedTransactions = await getDocs(query(
-        collection(db, 'loyalty_transactions'),
-        where('customerId', '==', customerId),
-        where('type', '==', 'earned')
-      ));
-      if (earnedTransactions.empty) {
-        throw new Error('Buy a product to earn points before redeeming rewards.');
-      }
-
+    return runFirestore(db, 'redeem reward', async (firestore) => {
+      const customerRef = doc(firestore, 'customers', customerId);
+      const rewardRef = doc(firestore, 'rewards', rewardId);
+      const txRef = doc(collection(firestore, 'loyalty_transactions'));
       let finalBalance = 0;
       let redeemedReward: Reward | null = null;
 
-      await runTransaction(db, async (transaction) => {
+      await runTransaction(firestore, async (transaction) => {
         const rewardSnap = await transaction.get(rewardRef);
         if (!rewardSnap.exists() || !rewardSnap.data().active) {
-          throw new Error('Reward does not exist or is inactive.');
+          throw new ServiceError('loyalty/reward-unavailable', 'This reward is no longer available.');
         }
 
         const rewardData = rewardSnap.data();
@@ -207,7 +133,10 @@ export const firebaseLoyaltyService: LoyaltyService = {
 
         finalBalance = currentPoints - pointsRequired;
 
-        transaction.update(customerRef, { points: finalBalance });
+        transaction.update(customerRef, {
+          points: finalBalance,
+          lastRedemptionId: txRef.id,
+        });
         transaction.set(txRef, {
           customerId,
           type: 'redeemed',
@@ -219,15 +148,6 @@ export const firebaseLoyaltyService: LoyaltyService = {
       });
 
       return { newBalance: finalBalance, reward: redeemedReward! };
-    } catch (e: any) {
-      if (e instanceof InsufficientPointsError) {
-        throw e;
-      }
-      if (e instanceof Error && e.message.includes('Buy a product')) {
-        throw e;
-      }
-      console.warn('[Firebase] redeemReward transaction failed, falling back to mock:', e);
-      return mockLoyaltyService.redeemReward(customerId, rewardId);
-    }
+    });
   },
 };
