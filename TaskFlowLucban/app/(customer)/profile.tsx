@@ -28,15 +28,15 @@ export default function ProfileScreen() {
       setSubmitting(true);
       if (isSignUpMode) {
         await signUp(inputEmail.trim(), inputPass.trim());
-        Alert.alert('Account Created', 'Welcome to Fred\'s Pies!');
+        Alert.alert('Account Created 🎉', 'Welcome to Fred\'s Pies! Your account has been created.');
       } else {
         await signIn(inputEmail.trim(), inputPass.trim());
-        Alert.alert('Signed In', 'Welcome back!');
+        Alert.alert('Signed In', 'Welcome back to Fred\'s Pies!');
       }
       setInputEmail('');
       setInputPass('');
     } catch (e: any) {
-      Alert.alert('Authentication Error', e.message || 'Failed to sign in.');
+      Alert.alert('Authentication Error', e.message || 'Failed to authenticate.');
     } finally {
       setSubmitting(false);
     }

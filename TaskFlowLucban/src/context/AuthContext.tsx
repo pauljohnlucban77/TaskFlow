@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth } from '../lib/firebase';
+import { getFirebaseAuth } from '../lib/firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -24,37 +24,55 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const dataSource = process.env.EXPO_PUBLIC_DATA_SOURCE || 'mock';
 
   useEffect(() => {
-    if (auth && dataSource === 'firebase') {
-      const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-        setUser(firebaseUser);
+    const authInstance = getFirebaseAuth();
+    if (authInstance) {
+      try {
+        const unsubscribe = onAuthStateChanged(authInstance, (firebaseUser) => {
+          setUser(firebaseUser);
+          setLoading(false);
+        });
+        return () => unsubscribe();
+      } catch (e) {
+        console.warn('[AuthContext] Auth listener error:', e);
         setLoading(false);
-      });
-      return () => unsubscribe();
+      }
     } else {
       setLoading(false);
     }
-  }, [dataSource]);
+  }, []);
 
-  const isMockUser = dataSource === 'mock' || !auth || !user;
-  const uid = user?.uid ?? '';
+  const uid = user?.uid ?? 'guest-customer-123';
   const email = user?.email ?? '';
+  const isMockUser = !user;
 
   const signIn = async (emailInput: string, passInput: string) => {
-    if (!auth) throw new Error('Firebase Auth not available');
-    await signInWithEmailAndPassword(auth, emailInput, passInput);
+    const authInstance = getFirebaseAuth();
+    if (!authInstance) {
+      throw new Error('Firebase Auth failed to initialize. Check your Firebase project config.');
+    }
+    const userCred = await signInWithEmailAndPassword(authInstance, emailInput, passInput);
+    setUser(userCred.user);
   };
 
   const signUp = async (emailInput: string, passInput: string) => {
-    if (!auth) throw new Error('Firebase Auth not available');
-    await createUserWithEmailAndPassword(auth, emailInput, passInput);
+    const authInstance = getFirebaseAuth();
+    if (!authInstance) {
+      throw new Error('Firebase Auth failed to initialize. Check your Firebase project config.');
+    }
+    const userCred = await createUserWithEmailAndPassword(authInstance, emailInput, passInput);
+    setUser(userCred.user);
   };
 
   const signOut = async () => {
-    if (auth && user) {
-      await fbSignOut(auth);
+    const authInstance = getFirebaseAuth();
+    if (authInstance && user) {
+      try {
+        await fbSignOut(authInstance);
+      } catch (e) {
+        console.warn('[AuthContext] Firebase signOut error:', e);
+      }
     }
     setUser(null);
   };

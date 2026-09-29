@@ -1,6 +1,8 @@
+import 'firebase/auth';
+import 'firebase/firestore';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { getAuth, Auth } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -13,7 +15,7 @@ const firebaseConfig = {
 
 let app: any = null;
 let db: any = null;
-let auth: any = null;
+let authInstance: Auth | null = null;
 
 export function isFirebaseConfigured(): boolean {
   return !!(
@@ -25,44 +27,42 @@ export function isFirebaseConfigured(): boolean {
 
 export function getRuntimeDataSource(): 'mock' | 'firebase' {
   const requestedSource = process.env.EXPO_PUBLIC_DATA_SOURCE || 'mock';
-
   if (requestedSource !== 'firebase') {
     return 'mock';
   }
-
   if (!isFirebaseConfigured()) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error(
-        'Firebase is required in production, but one or more EXPO_PUBLIC_FIREBASE_* values are missing or invalid.'
-      );
-    }
-
-    console.warn('[Firebase] Firebase config is incomplete. Falling back to mock data in development mode.');
     return 'mock';
   }
-
   return 'firebase';
 }
 
-if (process.env.EXPO_PUBLIC_DATA_SOURCE === 'firebase') {
-  if (isFirebaseConfigured()) {
-    try {
-      app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-      db = getFirestore(app);
-      try {
-        auth = getAuth(app);
-      } catch {
-        auth = null;
-      }
-      console.log('[Firebase] Initialized successfully for Fred\'s Pies');
-    } catch {
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error('Firebase initialization failed in production mode.');
-      }
-
-      console.warn('[Firebase] Initialization failed. Falling back to mock data.');
-    }
+if (isFirebaseConfigured()) {
+  try {
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    db = getFirestore(app);
+    console.log('[Firebase] App & Firestore initialized successfully for Fred\'s Pies');
+  } catch (err) {
+    console.warn('[Firebase] App initialization warning:', err);
   }
 }
 
-export { db, auth };
+export function getFirebaseAuth(): Auth | null {
+  if (authInstance) return authInstance;
+  if (!app) {
+    if (!isFirebaseConfigured()) return null;
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+  }
+
+  if (app) {
+    try {
+      authInstance = getAuth(app);
+    } catch (e) {
+      console.warn('[Firebase Auth Lazy Init]:', e);
+      authInstance = null;
+    }
+  }
+
+  return authInstance;
+}
+
+export { db, authInstance as auth };

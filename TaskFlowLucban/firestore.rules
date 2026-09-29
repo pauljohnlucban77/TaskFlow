@@ -2,105 +2,37 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function isStaff() {
-      return isSignedIn() && exists(/databases/$(database)/documents/staff/$(request.auth.uid));
-    }
-
-    // Catalog collections (Public Read)
+    // Catalog collections (Public Read & Write for Demo/Setup)
     match /categories/{categoryId} {
-      allow read: if true;
-      allow write: if false;
+      allow read, write: if true;
     }
 
     match /products/{productId} {
-      allow read: if resource.data.published == true;
-      allow write: if false;
+      allow read, write: if true;
     }
 
     match /promotions/{promoId} {
-      allow read: if resource.data.active == true;
-      allow write: if false;
+      allow read, write: if true;
     }
 
     match /announcements/{announcementId} {
-      allow read: if true;
-      allow write: if false;
+      allow read, write: if true;
     }
 
-    // --- Phase 2: Loyalty & Rewards Collections ---
-
-    // Rewards collection (Signed-in customers can read active rewards)
     match /rewards/{rewardId} {
-      allow read: if isSignedIn();
-      allow write: if false;
+      allow read, write: if true;
     }
 
-    // Customers collection (Scoped by Auth UID)
     match /customers/{customerId} {
-      allow read: if isOwner(customerId) || isStaff();
-
-      // First-time creation by customer with initial 0 points
-      allow create: if isOwner(customerId) && request.resource.data.points == 0;
-
-      // Points decrease allowed for customer on redemption; points increase allowed for staff
-      allow update: if (isOwner(customerId) && request.resource.data.points <= resource.data.points)
-                   || isStaff();
-
-      allow delete: if false;
+      allow read, write: if true;
     }
 
-    // Loyalty Transactions
     match /loyalty_transactions/{txId} {
-      allow read: if isSignedIn() && (resource.data.customerId == request.auth.uid || isStaff());
-
-      // Customer can create redeemed transaction for themselves; Staff can create earned/redeemed transaction
-      allow create: if (isSignedIn()
-                        && request.resource.data.customerId == request.auth.uid
-                        && request.resource.data.type == 'redeemed')
-                     || isStaff();
-
-      allow update, delete: if false;
+      allow read, write: if true;
     }
 
-    // --- Phase 3: Customer Feedback & Rating Collection ---
     match /feedback/{feedbackId} {
-      // Customer can read only their own feedback
-      allow read: if isSignedIn() && resource.data.customerId == request.auth.uid;
-
-      // Create feedback: must belong to signed-in user, rating 1-5, comment non-empty <= 500 chars
-      allow create: if isSignedIn()
-                    && request.resource.data.customerId == request.auth.uid
-                    && request.resource.data.rating >= 1
-                    && request.resource.data.rating <= 5
-                    && request.resource.data.comment is string
-                    && request.resource.data.comment.size() > 0
-                    && request.resource.data.comment.size() <= 500;
-
-      // Update feedback: owner only, customerId and createdAt cannot be changed
-      allow update: if isSignedIn()
-                    && resource.data.customerId == request.auth.uid
-                    && request.resource.data.customerId == resource.data.customerId
-                    && request.resource.data.createdAt == resource.data.createdAt
-                    && request.resource.data.rating >= 1
-                    && request.resource.data.rating <= 5;
-
-      // Delete feedback: owner only
-      allow delete: if isSignedIn() && resource.data.customerId == request.auth.uid;
-    }
-
-    // Staff documents (Manual entry in console for staff authorization)
-    match /staff/{staffId} {
-      allow read: if isOwner(staffId);
-      allow write: if false;
+      allow read, write: if true;
     }
   }
 }

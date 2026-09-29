@@ -39,6 +39,10 @@ export default function RootLayout() {
               options={{ title: 'Edit Feedback', headerBackTitle: 'Back' }}
             />
             <Stack.Screen
+              name="products/[id]"
+              options={{ title: 'Product Details', headerBackTitle: 'Back' }}
+            />
+            <Stack.Screen
               name="promotions/index"
               options={{ title: 'Promotions & Deals', headerBackTitle: 'Back' }}
             />

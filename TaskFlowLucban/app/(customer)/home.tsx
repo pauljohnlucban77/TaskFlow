@@ -102,6 +102,29 @@ export default function HomeScreen() {
     } as any);
   };
 
+  const handlePromotionPress = (promotionId: string) => {
+    const promotion = promotions.find((item) => item.id === promotionId);
+    if (!promotion) {
+      router.push(`/promotions/${promotionId}` as any);
+      return;
+    }
+
+    if (promotion.applicableProductIds && promotion.applicableProductIds[0]) {
+      router.push(`/products/${promotion.applicableProductIds[0]}` as any);
+      return;
+    }
+
+    if (promotion.applicableCategoryIds && promotion.applicableCategoryIds[0]) {
+      router.push({
+        pathname: '/(customer)/products',
+        params: { category: promotion.applicableCategoryIds[0] },
+      } as any);
+      return;
+    }
+
+    router.push(`/promotions/${promotionId}` as any);
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
@@ -175,7 +198,10 @@ export default function HomeScreen() {
               <View style={styles.searchResultsGrid}>
                 {searchResults.map((product) => (
                   <View key={product.id} style={styles.searchItemWrapper}>
-                    <ProductCard product={product} />
+                    <ProductCard
+                      product={product}
+                      onPress={() => router.push(`/products/${product.id}` as any)}
+                    />
                   </View>
                 ))}
               </View>
@@ -229,7 +255,7 @@ export default function HomeScreen() {
             {promotions.length > 0 && (
               <PromotionCarousel
                 promotions={promotions}
-                onSelectPromotion={(id) => router.push(`/promotions/${id}` as any)}
+                onSelectPromotion={handlePromotionPress}
               />
             )}
 
@@ -286,7 +312,11 @@ export default function HomeScreen() {
                   subtitle="Handcrafted daily by Master Baker Fred"
                 />
                 {featuredProducts.map((product) => (
-                  <FeaturedProductCard key={product.id} product={product} />
+                  <FeaturedProductCard
+                    key={product.id}
+                    product={product}
+                    onPress={() => router.push(`/products/${product.id}` as any)}
+                  />
                 ))}
               </View>
             )}
@@ -306,7 +336,12 @@ export default function HomeScreen() {
                   showsHorizontalScrollIndicator={false}
                   keyExtractor={(item) => item.id}
                   contentContainerStyle={styles.horizontalList}
-                  renderItem={({ item }) => <ProductCard product={item} />}
+                  renderItem={({ item }) => (
+                    <ProductCard
+                      product={item}
+                      onPress={() => router.push(`/products/${item.id}` as any)}
+                    />
+                  )}
                 />
               </View>
             )}
@@ -352,6 +387,7 @@ export default function HomeScreen() {
                 <Text style={styles.specialButtonText}>View Specials & Deals</Text>
               </Pressable>
             </View>
+
           </>
         )}
       </ScrollView>
@@ -418,7 +454,7 @@ const styles = StyleSheet.create({
   searchSection: {
     paddingHorizontal: Spacing.md,
     marginTop: Spacing.md,
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
   welcomeText: {
     fontSize: Typography.sizes.md,

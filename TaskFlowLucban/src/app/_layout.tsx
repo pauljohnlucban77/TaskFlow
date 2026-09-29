@@ -1,17 +1,12 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { CartProvider } from '../context/CartContext';
 import { AnnouncementsProvider } from '../context/AnnouncementsContext';
 import { AuthProvider } from '../context/AuthContext';
 import { Colors } from '../constants/colors';
-import { configureNotificationHandlers } from '../lib/notifications';
 
 export default function RootLayout() {
-  useEffect(() => {
-    configureNotificationHandlers();
-  }, []);
-
   return (
     <AuthProvider>
       <CartProvider>
@@ -32,10 +27,6 @@ export default function RootLayout() {
               options={{ title: 'Loyalty & Rewards', headerBackTitle: 'Back' }}
             />
             <Stack.Screen
-              name="products/[id]"
-              options={{ title: 'Product Details', headerBackTitle: 'Back' }}
-            />
-            <Stack.Screen
               name="feedback/index"
               options={{ title: 'My Feedback', headerBackTitle: 'Back' }}
             />
@@ -46,6 +37,10 @@ export default function RootLayout() {
             <Stack.Screen
               name="feedback/[id]/edit"
               options={{ title: 'Edit Feedback', headerBackTitle: 'Back' }}
+            />
+            <Stack.Screen
+              name="products/[id]"
+              options={{ title: 'Product Details', headerBackTitle: 'Back' }}
             />
             <Stack.Screen
               name="promotions/index"

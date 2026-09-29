@@ -9,7 +9,6 @@ import {
   setDoc,
   query,
   where,
-  orderBy,
   runTransaction,
   serverTimestamp,
 } from 'firebase/firestore';
@@ -34,7 +33,6 @@ export const firebaseLoyaltyService: LoyaltyService = {
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
         };
       } else {
-        // Create new customer document
         const newCustomerData = {
           name,
           email,
@@ -88,13 +86,13 @@ export const firebaseLoyaltyService: LoyaltyService = {
   async getTransactionHistory(customerId: string): Promise<LoyaltyTransaction[]> {
     if (!db) return mockLoyaltyService.getTransactionHistory(customerId);
     try {
+      // Query by customerId without orderBy to avoid requiring a composite index in Firestore
       const q = query(
         collection(db, 'loyalty_transactions'),
-        where('customerId', '==', customerId),
-        orderBy('createdAt', 'desc')
+        where('customerId', '==', customerId)
       );
       const snapshot = await getDocs(q);
-      return snapshot.docs.map((d: any) => {
+      const list = snapshot.docs.map((d: any) => {
         const data = d.data();
         return {
           id: d.id,
@@ -107,6 +105,8 @@ export const firebaseLoyaltyService: LoyaltyService = {
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
         };
       });
+      // Sort in memory by createdAt desc
+      return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch (e) {
       console.warn('[Firebase] getTransactionHistory error, falling back to mock:', e);
       return mockLoyaltyService.getTransactionHistory(customerId);
@@ -172,7 +172,6 @@ export const firebaseLoyaltyService: LoyaltyService = {
       let redeemedReward: Reward | null = null;
 
       await runTransaction(db, async (transaction) => {
-        // Read reward inside transaction
         const rewardSnap = await transaction.get(rewardRef);
         if (!rewardSnap.exists() || !rewardSnap.data().active) {
           throw new Error('Reward does not exist or is inactive.');
@@ -182,7 +181,6 @@ export const firebaseLoyaltyService: LoyaltyService = {
         const pointsRequired = rewardData.pointsRequired || 0;
         redeemedReward = mapReward(rewardSnap.id, rewardData);
 
-        // Read customer inside transaction
         const customerSnap = await transaction.get(customerRef);
         if (!customerSnap.exists()) {
           throw new InsufficientPointsError(redeemedReward.name, pointsRequired, 0);

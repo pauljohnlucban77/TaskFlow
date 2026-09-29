@@ -25,12 +25,12 @@ import { PromotionCarousel } from '../../components/promotions/PromotionCarousel
 import { AnnouncementBanner } from '../../components/announcements/AnnouncementBanner';
 import { AnnouncementBell } from '../../components/announcements/AnnouncementBell';
 import { IconButton } from '../../components/ui/IconButton';
+import { LoyaltyCard } from '../../components/loyalty/LoyaltyCard';
 import { productService, promotionService } from '../../services';
 import { Product, Category } from '../../types/product';
 import { Promotion } from '../../types/promotion';
 import { useAnnouncements } from '../../context/AnnouncementsContext';
 import { useLoyalty } from '../../hooks/useLoyalty';
-import { LoyaltyCard } from '../../components/loyalty/LoyaltyCard';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -42,7 +42,7 @@ export default function HomeScreen() {
     announcements,
   } = useAnnouncements();
 
-  const { account } = useLoyalty();
+  const { balance, account } = useLoyalty();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
@@ -134,6 +134,15 @@ export default function HomeScreen() {
           <Text style={styles.wordmarkSubtitle}>Artisan Bakery & Cafe</Text>
         </View>
         <View style={styles.headerActions}>
+          <Pressable
+            onPress={() => router.push('/loyalty' as any)}
+            style={styles.pointsChip}
+            accessibilityLabel="View Loyalty Points"
+            accessibilityRole="button"
+          >
+            <Ionicons name="star" size={14} color={Colors.accent} />
+            <Text style={styles.pointsChipText}>{balance} pts</Text>
+          </Pressable>
           <AnnouncementBell
             unreadCount={unreadCount}
             onPress={() => router.push('/announcements' as any)}
@@ -201,15 +210,45 @@ export default function HomeScreen() {
         ) : (
           /* Normal Home Page Layout */
           <>
-            <View style={styles.loyaltySection}>
-              <SectionHeader
-                title="Your Loyalty Card"
-                subtitle="Earn points for every purchase"
-              />
-              <LoyaltyCard
-                account={account}
+            {/* DYNAMIC DIGITAL LOYALTY CARD (Primary Visual Element on Home) */}
+            <LoyaltyCard
+              account={account}
+              onPress={() => router.push('/loyalty' as any)}
+            />
+
+            {/* Quick Action Buttons Row */}
+            <View style={styles.quickActionsRow}>
+              <Pressable
+                onPress={() => router.push('/(customer)/products' as any)}
+                style={({ pressed }) => [styles.quickActionButton, pressed && styles.pressed]}
+              >
+                <Ionicons name="basket-outline" size={18} color={Colors.primary} />
+                <Text style={styles.quickActionText}>Products</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => router.push('/(customer)/orders' as any)}
+                style={({ pressed }) => [styles.quickActionButton, pressed && styles.pressed]}
+              >
+                <Ionicons name="receipt-outline" size={18} color={Colors.primary} />
+                <Text style={styles.quickActionText}>My Orders</Text>
+              </Pressable>
+
+              <Pressable
                 onPress={() => router.push('/loyalty' as any)}
-              />
+                style={({ pressed }) => [styles.quickActionButton, pressed && styles.pressed]}
+              >
+                <Ionicons name="gift-outline" size={18} color={Colors.primary} />
+                <Text style={styles.quickActionText}>Rewards</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => router.push('/feedback/new' as any)}
+                style={({ pressed }) => [styles.quickActionButton, pressed && styles.pressed]}
+              >
+                <Ionicons name="chatbubble-outline" size={18} color={Colors.primary} />
+                <Text style={styles.quickActionText}>Feedback</Text>
+              </Pressable>
             </View>
 
             {/* Promotions Carousel */}
@@ -235,6 +274,34 @@ export default function HomeScreen() {
                   />
                 )}
               />
+            </View>
+
+            {/* FEATURE CARD 2: Customer Feedback & Rating */}
+            <View style={styles.feedbackHomeCard}>
+              <View style={styles.feedbackCardHeader}>
+                <Ionicons name="star" size={24} color={Colors.accent} style={{ marginRight: 10 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.feedbackCardTitle}>How Was Your Experience?</Text>
+                  <Text style={styles.feedbackCardSubtitle}>
+                    Share your review and rate our bakery pastries!
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.feedbackButtonRow}>
+                <Pressable
+                  onPress={() => router.push('/feedback/new' as any)}
+                  style={({ pressed }) => [styles.feedbackPrimaryButton, pressed && styles.pressed]}
+                >
+                  <Ionicons name="add-circle-outline" size={16} color={Colors.white} style={{ marginRight: 4 }} />
+                  <Text style={styles.feedbackPrimaryText}>Give Feedback</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push('/feedback' as any)}
+                  style={({ pressed }) => [styles.feedbackSecondaryButton, pressed && styles.pressed]}
+                >
+                  <Text style={styles.feedbackSecondaryText}>My Reviews</Text>
+                </Pressable>
+              </View>
             </View>
 
             {/* Featured Products */}
@@ -361,8 +428,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  pointsChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceVariant,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+    borderRadius: Spacing.radiusSm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginRight: Spacing.xs,
+  },
+  pointsChipText: {
+    fontSize: Typography.sizes.xs,
+    fontWeight: Typography.weights.bold,
+    color: Colors.primaryDark,
+    marginLeft: 4,
+  },
   profileButton: {
-    marginLeft: Spacing.sm,
+    marginLeft: Spacing.xs,
   },
   scrollContent: {
     paddingBottom: Spacing.xxl,
@@ -377,6 +461,29 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginBottom: Spacing.xs,
     fontWeight: Typography.weights.medium,
+  },
+  quickActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    marginVertical: Spacing.xs,
+  },
+  quickActionButton: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderRadius: Spacing.radiusMd,
+    paddingVertical: Spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginHorizontal: 3,
+  },
+  quickActionText: {
+    fontSize: Typography.sizes.xs,
+    fontWeight: Typography.weights.bold,
+    color: Colors.text,
+    marginTop: 2,
   },
   categoriesSection: {
     marginVertical: Spacing.sm,
@@ -399,6 +506,68 @@ const styles = StyleSheet.create({
   searchItemWrapper: {
     width: '48%',
     marginBottom: Spacing.md,
+  },
+  feedbackHomeCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: Spacing.radiusLg,
+    marginHorizontal: Spacing.md,
+    marginVertical: Spacing.sm,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  feedbackCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  feedbackCardTitle: {
+    fontSize: Typography.sizes.md,
+    fontWeight: Typography.weights.bold,
+    color: Colors.text,
+  },
+  feedbackCardSubtitle: {
+    fontSize: Typography.sizes.xs,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  feedbackButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  feedbackPrimaryButton: {
+    backgroundColor: Colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Spacing.radiusMd,
+    flex: 1,
+    marginRight: Spacing.xs,
+  },
+  feedbackPrimaryText: {
+    color: Colors.white,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.bold,
+  },
+  feedbackSecondaryButton: {
+    backgroundColor: Colors.surfaceVariant,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Spacing.radiusMd,
+    flex: 1,
+    marginLeft: Spacing.xs,
+  },
+  feedbackSecondaryText: {
+    color: Colors.primaryDark,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.bold,
   },
   announcementPreviewCard: {
     backgroundColor: Colors.surface,
@@ -466,15 +635,8 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.sm,
     fontWeight: Typography.weights.semiBold,
   },
-  loyaltySection: {
-    marginVertical: Spacing.sm,
-  },
-  loyaltyCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: Spacing.radiusLg,
-    padding: Spacing.xl,
-    margin: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  pressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.99 }],
   },
 });

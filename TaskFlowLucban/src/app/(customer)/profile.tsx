@@ -28,15 +28,15 @@ export default function ProfileScreen() {
       setSubmitting(true);
       if (isSignUpMode) {
         await signUp(inputEmail.trim(), inputPass.trim());
-        Alert.alert('Account Created', 'Welcome to Fred\'s Pies!');
+        Alert.alert('Account Created 🎉', 'Welcome to Fred\'s Pies! Your account has been created.');
       } else {
         await signIn(inputEmail.trim(), inputPass.trim());
-        Alert.alert('Signed In', 'Welcome back!');
+        Alert.alert('Signed In', 'Welcome back to Fred\'s Pies!');
       }
       setInputEmail('');
       setInputPass('');
     } catch (e: any) {
-      Alert.alert('Authentication Error', e.message || 'Failed to sign in.');
+      Alert.alert('Authentication Error', e.message || 'Failed to authenticate.');
     } finally {
       setSubmitting(false);
     }
@@ -44,6 +44,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Account Info Card */}
       <View style={styles.accountCard}>
         <View style={styles.avatar}>
           <Ionicons name="person" size={32} color={Colors.white} />
@@ -55,6 +56,7 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {/* Navigation Rows */}
       <View style={styles.section}>
         <Pressable
           onPress={() => router.push('/loyalty' as any)}
@@ -93,6 +95,7 @@ export default function ProfileScreen() {
         </Pressable>
       </View>
 
+      {/* Firebase Sign-In / Sign-Up Form (if signed out) */}
       {!user && (
         <View style={styles.authCard}>
           <Text style={styles.authTitle}>
@@ -140,6 +143,7 @@ export default function ProfileScreen() {
         </View>
       )}
 
+      {/* Sign Out Button (if signed in) */}
       {user && (
         <Pressable
           onPress={() => signOut()}
@@ -211,39 +215,41 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: Spacing.md,
   },
-  rowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  rowIconBg: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.sm,
-  },
-  rowTitle: {
-    color: Colors.text,
-    fontSize: Typography.sizes.md,
-    fontWeight: Typography.weights.bold,
-  },
-  rowSubtitle: {
-    color: Colors.textMuted,
-    fontSize: Typography.sizes.xs,
-    marginTop: 2,
-  },
   borderTop: {
     borderTopWidth: 1,
     borderTopColor: Colors.border,
   },
+  pressed: {
+    opacity: 0.8,
+  },
+  rowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rowIconBg: {
+    width: 38,
+    height: 38,
+    borderRadius: Spacing.radiusSm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.md,
+  },
+  rowTitle: {
+    fontSize: Typography.sizes.md,
+    fontWeight: Typography.weights.bold,
+    color: Colors.text,
+  },
+  rowSubtitle: {
+    fontSize: Typography.sizes.xs,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
   authCard: {
     backgroundColor: Colors.surface,
     borderRadius: Spacing.radiusLg,
+    padding: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.border,
-    padding: Spacing.md,
   },
   authTitle: {
     fontSize: Typography.sizes.lg,
@@ -252,7 +258,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   authSubtitle: {
-    fontSize: Typography.sizes.sm,
+    fontSize: Typography.sizes.xs,
     color: Colors.textSecondary,
     marginBottom: Spacing.md,
   },
@@ -260,19 +266,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceVariant,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Spacing.radiusSm,
+    borderRadius: Spacing.radiusMd,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    marginBottom: Spacing.sm,
     fontSize: Typography.sizes.md,
     color: Colors.text,
+    marginBottom: Spacing.sm,
   },
   authButton: {
     backgroundColor: Colors.primary,
     paddingVertical: Spacing.md,
     borderRadius: Spacing.radiusMd,
     alignItems: 'center',
-    marginTop: Spacing.sm,
+    marginTop: Spacing.xs,
   },
   authButtonText: {
     color: Colors.white,
@@ -284,25 +290,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   toggleAuthText: {
+    fontSize: Typography.sizes.sm,
     color: Colors.primary,
-    fontWeight: Typography.weights.bold,
+    fontWeight: Typography.weights.medium,
   },
   signOutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: Spacing.lg,
-    paddingVertical: Spacing.md,
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.errorBackground,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.error,
+    paddingVertical: Spacing.md,
     borderRadius: Spacing.radiusMd,
   },
   signOutText: {
     color: Colors.error,
+    fontSize: Typography.sizes.md,
     fontWeight: Typography.weights.bold,
-  },
-  pressed: {
-    opacity: 0.85,
   },
 });

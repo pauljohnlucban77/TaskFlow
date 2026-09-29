@@ -1,46 +1,13 @@
-export async function requestNotificationPermissions(): Promise<boolean> {
-  try {
-    const Notifications = require('expo-notifications');
-    if (!Notifications?.requestPermissionsAsync) {
-      return false;
+import { Platform } from 'react-native';
+
+export function triggerLocalNotification(title: string, message: string) {
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, { body: message });
+    } else {
+      console.log(`[Notification Web] ${title}: ${message}`);
     }
-
-    const status = await Notifications.requestPermissionsAsync();
-    return status?.granted === true;
-  } catch {
-    return false;
-  }
-}
-
-export async function getNotificationToken(): Promise<string | null> {
-  try {
-    const Notifications = require('expo-notifications');
-    if (!Notifications?.getExpoPushTokenAsync) {
-      return null;
-    }
-
-    const token = await Notifications.getExpoPushTokenAsync();
-    return token?.data ?? null;
-  } catch {
-    return null;
-  }
-}
-
-export function configureNotificationHandlers() {
-  try {
-    const Notifications = require('expo-notifications');
-    if (!Notifications?.setNotificationHandler) {
-      return;
-    }
-
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: false,
-        shouldSetBadge: false,
-      }),
-    });
-  } catch {
-    // expo-notifications is optional in Expo Go and is no-op here when unavailable.
+  } else {
+    console.log(`[Notification Mobile] ${title}: ${message}`);
   }
 }

@@ -12,20 +12,20 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { productService } from '../../services';
-import { Product } from '../../types/product';
-import { ProductReviewItem, initialProductReviews } from '../../services/productReviewStore';
-import { useCart } from '../../context/CartContext';
-import { useCurrentCustomer } from '../../hooks/useCurrentCustomer';
-import { StarRating } from '../../components/feedback/StarRating';
-import { ConfirmDialog } from '../../components/feedback/ConfirmDialog';
-import { Badge } from '../../components/ui/Badge';
-import { ErrorState } from '../../components/ui/ErrorState';
-import { Colors } from '../../constants/colors';
-import { Spacing } from '../../constants/spacing';
-import { Typography } from '../../constants/typography';
-import { formatPrice } from '../../utils/formatPrice';
-import { MAX_COMMENT_LENGTH, validateFeedback } from '../../utils/validateFeedback';
+import { productService } from '../../src/services';
+import { Product } from '../../src/types/product';
+import { ProductReviewItem, initialProductReviews } from '../../src/services/productReviewStore';
+import { useCart } from '../../src/context/CartContext';
+import { useCurrentCustomer } from '../../src/hooks/useCurrentCustomer';
+import { StarRating } from '../../src/components/feedback/StarRating';
+import { ConfirmDialog } from '../../src/components/feedback/ConfirmDialog';
+import { Badge } from '../../src/components/ui/Badge';
+import { ErrorState } from '../../src/components/ui/ErrorState';
+import { Colors } from '../../src/constants/colors';
+import { Spacing } from '../../src/constants/spacing';
+import { Typography } from '../../src/constants/typography';
+import { formatPrice } from '../../src/utils/formatPrice';
+import { MAX_COMMENT_LENGTH, validateFeedback } from '../../src/utils/validateFeedback';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
