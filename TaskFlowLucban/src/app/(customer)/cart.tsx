@@ -21,10 +21,15 @@ import { Promotion } from '../../types/promotion';
 import { useAuth } from '../../context/AuthContext';
 import { orderService } from '../../services';
 import { useRouter } from 'expo-router';
+import { useLoyalty } from '../../hooks/useLoyalty';
+import { isLocalOrderPreviewEnabled } from '../../utils/localOrderPreview';
 
 export default function CartScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, uid, isMockUser, enterGuestMode } = useAuth();
+  const { refresh: refreshLoyalty } = useLoyalty();
+  const localPreview = isLocalOrderPreviewEnabled();
+  const canPlaceOrder = Boolean(user || (localPreview && !isMockUser));
   const {
     items,
     clear,
@@ -81,20 +86,23 @@ export default function CartScreen() {
   };
 
   const handleCheckout = () => {
-    if (!user) {
-      Alert.alert('Sign in required', 'Sign in or create an account to place a demo pickup order.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Open Profile', onPress: () => router.push('/(customer)/profile') },
+    if (!canPlaceOrder) {
+      Alert.alert('Continue as a guest', 'Open your profile to start a guest session before placing your order.', [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Open Profile', onPress: () => {
+          if (localPreview) enterGuestMode();
+          router.push('/(customer)/profile');
+        } },
       ]);
       return;
     }
 
     Alert.alert(
-      'Simulated checkout',
-      'This demo creates a simulated pickup order. No real payment will be collected.',
+      'Place pickup order?',
+      'Your order will be recorded for pickup. Payment is due when you collect it at the bakery.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Place demo order', onPress: () => void submitDemoOrder() },
+        { text: 'Place Order', onPress: () => void submitDemoOrder() },
       ]
     );
   };
@@ -122,7 +130,7 @@ export default function CartScreen() {
         promoCode: promoCode || undefined,
         requestId: requestRef.current.requestId,
       }, {
-        customerId: user!.uid,
+        customerId: user?.uid ?? uid,
         items: items.map(({ product, quantity }) => ({
           productId: product.id,
           name: product.name,
@@ -134,6 +142,7 @@ export default function CartScreen() {
         discount,
         total,
       });
+      void refreshLoyalty();
       requestRef.current = null;
       clear();
       router.push({
@@ -146,7 +155,7 @@ export default function CartScreen() {
         },
       });
     } catch (error) {
-      Alert.alert('Demo checkout failed', error instanceof Error ? error.message : 'Please try again.');
+      Alert.alert('Unable to place order', error instanceof Error ? error.message : 'Please try again.');
     } finally {
       submitLockRef.current = false;
       setCheckingOut(false);
@@ -264,18 +273,24 @@ export default function CartScreen() {
           <Text style={styles.totalValue}>{formatPrice(total)}</Text>
         </View>
 
-        <Text style={styles.demoNotice}>Pickup order · Simulated payment · No real charge</Text>
+        <View style={styles.pickupInfo}>
+          <Ionicons name="storefront-outline" size={20} color={Colors.primary} />
+          <View style={styles.pickupTextWrap}>
+            <Text style={styles.pickupTitle}>Pickup at Fred’s Pies</Text>
+            <Text style={styles.pickupSubtitle}>Pay in store when you collect your order</Text>
+          </View>
+        </View>
         <Pressable
           onPress={handleCheckout}
           disabled={checkingOut}
           style={[styles.checkoutButton, checkingOut && styles.checkoutButtonBusy]}
-          accessibilityLabel="Place simulated pickup order"
+          accessibilityLabel="Place pickup order"
           accessibilityRole="button"
         >
           {checkingOut ? (
             <ActivityIndicator color={Colors.white} />
           ) : (
-            <Text style={styles.checkoutButtonText}>{user ? 'Place Demo Pickup Order' : 'Sign In to Continue'}</Text>
+            <Text style={styles.checkoutButtonText}>{canPlaceOrder ? 'Place Pickup Order' : 'Continue to Account'}</Text>
           )}
         </Pressable>
       </View>
@@ -437,12 +452,10 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.bold,
     color: Colors.primary,
   },
-  demoNotice: {
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    fontSize: Typography.sizes.xs,
-    marginBottom: Spacing.sm,
-  },
+  pickupInfo: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surfaceVariant, borderRadius: Spacing.radiusSm, padding: Spacing.sm, marginBottom: Spacing.md },
+  pickupTextWrap: { marginLeft: Spacing.sm, flex: 1 },
+  pickupTitle: { color: Colors.text, fontSize: Typography.sizes.sm, fontWeight: Typography.weights.bold },
+  pickupSubtitle: { color: Colors.textSecondary, fontSize: Typography.sizes.xs, marginTop: 2 },
   checkoutButton: {
     backgroundColor: Colors.primary,
     paddingVertical: Spacing.md,

@@ -49,7 +49,10 @@ export function useLoyalty() {
 
       setRewards(rList || []);
       setHistory(hList || []);
-      setHasPurchased((hList || []).some((transaction) => transaction.type === 'earned'));
+      const localOrders = process.env.EXPO_PUBLIC_DATA_SOURCE === 'mock'
+        ? await (await import('../services')).orderService.getMyOrders(activeUid)
+        : [];
+      setHasPurchased((hList || []).some((transaction) => transaction.type === 'earned') || localOrders.length > 0);
     } catch (e: any) {
       console.warn('[useLoyalty] Error loading loyalty data:', e);
       setError(e.message || 'Failed to load loyalty data.');

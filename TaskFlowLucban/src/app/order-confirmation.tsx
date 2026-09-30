@@ -18,25 +18,25 @@ export default function OrderConfirmationScreen() {
     <View style={styles.container}>
       <View style={styles.confirmationCard}>
         <View style={styles.iconCircle}><Ionicons name="checkmark" size={42} color={Colors.white} /></View>
-        <Text style={styles.title}>Demo order placed</Text>
+        <Text style={styles.title}>Order received</Text>
         <Text style={styles.subtitle}>
           {isDevicePreview
-            ? 'Your simulated pickup order was saved on this device for preview.'
-            : 'Your simulated pickup order was recorded in the staging demo.'}
+            ? 'Your pickup order is confirmed and ready for review on this device.'
+            : 'Your pickup order is confirmed.'}
         </Text>
         <View style={styles.notice}>
-          <Text style={styles.noticeTitle}>{isDevicePreview ? 'Local preview only · no points awarded' : 'No payment was collected'}</Text>
+          <Text style={styles.noticeTitle}>{isDevicePreview ? 'Pay in store at pickup' : 'Pay in store at pickup'}</Text>
           <Text style={styles.noticeBody}>
             {isDevicePreview
-              ? 'This preview is saved only in this app on this device. It is not synced to Firebase, earns no points, and has not been sent to the bakery.'
-              : 'This order is for demonstration only and has not been sent to the bakery.'}
+              ? 'This order is saved on this device and has not been sent to bakery staff. Payment is due when you collect it.'
+              : 'Your order has been recorded. Payment is due when you collect it.'}
           </Text>
         </View>
         <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Order reference</Text><Text style={styles.summaryValue}>{params.orderId?.slice(-12) || '—'}</Text></View>
-        <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Simulated total</Text><Text style={styles.summaryValue}>{formatPrice(Number.isFinite(total) ? total : 0)}</Text></View>
+        <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Amount due at pickup</Text><Text style={styles.summaryValue}>{formatPrice(Number.isFinite(total) ? total : 0)}</Text></View>
         {points > 0 && <View style={styles.pointsRow}><Text style={styles.pointsValue}>+{points} loyalty points awarded</Text></View>}
         <Pressable style={styles.primaryButton} onPress={() => router.replace('/(customer)/orders')}>
-          <Text style={styles.primaryButtonText}>View Demo Orders</Text>
+          <Text style={styles.primaryButtonText}>View My Orders</Text>
         </Pressable>
         <Pressable style={styles.secondaryButton} onPress={() => router.replace('/(customer)/products')}>
           <Text style={styles.secondaryButtonText}>Continue Browsing</Text>

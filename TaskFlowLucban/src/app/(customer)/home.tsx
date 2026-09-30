@@ -31,9 +31,12 @@ import { Product, Category } from '../../types/product';
 import { Promotion } from '../../types/promotion';
 import { useAnnouncements } from '../../context/AnnouncementsContext';
 import { useLoyalty } from '../../hooks/useLoyalty';
+import { useAuth } from '../../context/AuthContext';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { isMockUser } = useAuth();
+  const localPreview = process.env.EXPO_PUBLIC_DATA_SOURCE === 'mock';
   const {
     pinnedAnnouncement,
     unreadCount,
@@ -161,6 +164,16 @@ export default function HomeScreen() {
             accessibilityLabel="Customer Profile"
             style={styles.profileButton}
           />
+          {localPreview && isMockUser && (
+            <Pressable
+              onPress={() => router.push('/(customer)/profile' as any)}
+              style={styles.guestButton}
+              accessibilityRole="button"
+              accessibilityLabel="Start guest session"
+            >
+              <Text style={styles.guestButtonText}>Guest</Text>
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -448,6 +461,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  guestButton: { backgroundColor: Colors.primary, borderRadius: Spacing.radiusSm, paddingHorizontal: Spacing.sm, paddingVertical: 7, marginLeft: Spacing.xs },
+  guestButtonText: { color: Colors.white, fontWeight: Typography.weights.bold, fontSize: Typography.sizes.xs },
   pointsChip: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getFirebaseAuth } from '../lib/firebase';
+import { isLocalOrderPreviewEnabled } from '../utils/localOrderPreview';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -17,12 +18,14 @@ interface AuthContextType {
   signUp: (email: string, pass: string) => Promise<void>;
   signOut: () => Promise<void>;
   isMockUser: boolean;
+  enterGuestMode: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [guestMode, setGuestMode] = useState(false);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -46,6 +49,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const uid = user?.uid ?? 'mock-customer-123';
   const email = user?.email ?? '';
   const isMockUser = !user;
+  const enterGuestMode = () => {
+    if (!isLocalOrderPreviewEnabled()) throw new Error('Guest access is available in the local preview only.');
+    setGuestMode(true);
+  };
 
   const signIn = async (emailInput: string, passInput: string) => {
     const authInstance = getFirebaseAuth();
@@ -54,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     const userCred = await signInWithEmailAndPassword(authInstance, emailInput, passInput);
     setUser(userCred.user);
+    setGuestMode(false);
   };
 
   const signUp = async (emailInput: string, passInput: string) => {
@@ -63,6 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     const userCred = await createUserWithEmailAndPassword(authInstance, emailInput, passInput);
     setUser(userCred.user);
+    setGuestMode(false);
   };
 
   const signOut = async () => {
@@ -75,6 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     setUser(null);
+    setGuestMode(false);
   };
 
   return (
@@ -87,7 +97,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signUp,
         signOut,
-        isMockUser,
+        isMockUser: isMockUser && !guestMode,
+        enterGuestMode,
       }}
     >
       {children}

@@ -10,16 +10,18 @@ import { Colors } from '../../constants/colors';
 import { Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
 import { formatPrice } from '../../utils/formatPrice';
+import { isLocalOrderPreviewEnabled } from '../../utils/localOrderPreview';
 
 export default function OrdersScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, uid, isMockUser } = useAuth();
+  const localPreview = isLocalOrderPreviewEnabled();
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadOrders = useCallback(async () => {
-    if (!user) {
+    if (!user && !(localPreview && !isMockUser)) {
       setOrders([]);
       setError(null);
       setLoading(false);
@@ -29,19 +31,19 @@ export default function OrdersScreen() {
     setLoading(true);
     setError(null);
     try {
-      setOrders(await orderService.getMyOrders(user.uid));
+      setOrders(await orderService.getMyOrders(uid));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Could not load your demo orders.');
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, uid, localPreview, isMockUser]);
 
   useFocusEffect(useCallback(() => {
     void loadOrders();
   }, [loadOrders]));
 
-  if (!user) {
+  if (!user && !(localPreview && !isMockUser)) {
     return (
       <View style={styles.centered}>
         <EmptyState icon="person-outline" title="Sign in to view orders" message="Your pickup demo orders are saved to your account." />
@@ -63,7 +65,7 @@ export default function OrdersScreen() {
   if (orders.length === 0) {
     return (
       <View style={styles.centered}>
-        <EmptyState icon="receipt-outline" title="No demo orders yet" message="Orders you place during the demo will appear here. No real payments are collected." />
+        <EmptyState icon="receipt-outline" title="No orders yet" message="Your pickup orders will appear here after checkout." />
       </View>
     );
   }
@@ -79,15 +81,15 @@ export default function OrdersScreen() {
       ListHeaderComponent={(
         <Text style={styles.disclaimer}>
           {orders.some((order) => order.persistence === 'device_preview')
-            ? 'LOCAL PREVIEW ORDERS · SAVED ON THIS DEVICE · NO POINTS OR REAL CHARGES'
-            : 'DEMO ORDERS · SIMULATED PAYMENT · NO REAL CHARGES'}
+            ? 'GUEST ORDERS · SAVED ON THIS DEVICE · PAY AT PICKUP'
+            : 'PICKUP ORDERS · PAY AT PICKUP'}
         </Text>
       )}
       renderItem={({ item: order }) => (
         <View style={styles.orderCard}>
           <View style={styles.orderHeading}>
             <View style={styles.orderTitleContainer}>
-              <Text style={styles.orderTitle}>Pickup order</Text>
+            <Text style={styles.orderTitle}>Pickup order</Text>
               <Text style={styles.orderDate}>{new Date(order.createdAt).toLocaleString()}</Text>
             </View>
             <Text style={styles.orderStatus}>DEMO</Text>
@@ -101,14 +103,14 @@ export default function OrdersScreen() {
           ))}
           {order.discount > 0 && <Text style={styles.discount}>Promo savings: {formatPrice(order.discount)}</Text>}
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total (simulated)</Text>
+          <Text style={styles.totalLabel}>Due at pickup</Text>
             <Text style={styles.totalValue}>{formatPrice(order.total)}</Text>
           </View>
           {order.pointsAwarded > 0 && <Text style={styles.points}>+{order.pointsAwarded} points awarded</Text>}
           <Text style={styles.orderNotice}>
             {order.persistence === 'device_preview'
-              ? 'Local preview only. This order is not synced to Firebase and has not been sent to the bakery.'
-              : 'This is a demo order only. It has not been sent to the bakery.'}
+              ? 'Saved on this device. Please show your order reference to bakery staff when collecting.'
+              : 'Please show your order reference to bakery staff when collecting.'}
           </Text>
         </View>
       )}

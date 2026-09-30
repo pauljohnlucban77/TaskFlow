@@ -7,16 +7,18 @@ import { useLoyalty } from '../../hooks/useLoyalty';
 import { Colors } from '../../constants/colors';
 import { Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
+import { isLocalOrderPreviewEnabled } from '../../utils/localOrderPreview';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, uid, email, signIn, signUp, signOut, isMockUser } = useAuth();
+  const { user, uid, email, signIn, signUp, signOut, isMockUser, enterGuestMode } = useAuth();
   const { balance, hasPurchased } = useLoyalty();
 
   const [inputEmail, setInputEmail] = useState('');
   const [inputPass, setInputPass] = useState('');
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const localPreview = isLocalOrderPreviewEnabled();
 
   const handleAuthAction = async () => {
     if (!inputEmail.trim() || !inputPass.trim()) {
@@ -50,16 +52,16 @@ export default function ProfileScreen() {
           <Ionicons name="person" size={32} color={Colors.white} />
         </View>
         <View style={styles.accountText}>
-          <Text style={styles.accountEmail}>{email || 'Guest Customer'}</Text>
-          <Text style={styles.accountUid}>ID: {uid.slice(0, 12)}...</Text>
-          {isMockUser && <Text style={styles.mockBadge}>Demo / Mock Mode</Text>}
+          <Text style={styles.accountEmail}>{email || (localPreview && !isMockUser ? 'Guest Customer' : 'Welcome to Fred’s Pies')}</Text>
+          {user && <Text style={styles.accountUid}>ID: {uid.slice(0, 12)}...</Text>}
+          {isMockUser && localPreview && <Text style={styles.mockBadge}>Guest account · This device</Text>}
         </View>
       </View>
 
       {user && !hasPurchased && (
         <View style={styles.loyaltyNotice}>
           <Text style={styles.loyaltyNoticeTitle}>No points yet</Text>
-          <Text style={styles.loyaltyNoticeText}>Points become available after a successful simulated demo checkout.</Text>
+          <Text style={styles.loyaltyNoticeText}>Earn points with eligible orders placed through your account.</Text>
         </View>
       )}
 
@@ -102,14 +104,16 @@ export default function ProfileScreen() {
         </Pressable>
       </View>
 
-      {/* Firebase Sign-In / Sign-Up Form (if signed out) */}
+      {/* Sign-In / Sign-Up Form */}
       {!user && (
         <View style={styles.authCard}>
           <Text style={styles.authTitle}>
             {isSignUpMode ? 'Create Fred\'s Pies Account' : 'Sign In to Your Account'}
           </Text>
           <Text style={styles.authSubtitle}>
-            Sign in to sync your demo orders, points, and feedback.
+            {localPreview
+              ? 'Sign in or create an account to use your customer profile. Orders in local preview remain saved on this device.'
+              : 'Sign in to access your orders, points, and feedback.'}
           </Text>
 
           <TextInput
@@ -150,8 +154,34 @@ export default function ProfileScreen() {
         </View>
       )}
 
+      {!user && localPreview && !isMockUser && (
+        <View style={styles.authCard}>
+          <Text style={styles.authTitle}>Your guest account is ready</Text>
+          <Text style={styles.authSubtitle}>Orders and preferences are saved on this device.</Text>
+          <Pressable onPress={signOut} style={styles.authButton}>
+            <Text style={styles.authButtonText}>End Guest Session</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {!user && localPreview && isMockUser && (
+        <View style={styles.authCard}>
+          <Text style={styles.authTitle}>Welcome to Fred’s Pies</Text>
+          <Text style={styles.authSubtitle}>Explore the menu, save orders on this device, and collect them at the bakery.</Text>
+          <Pressable
+            onPress={() => {
+              enterGuestMode();
+              Alert.alert('Welcome', 'You can now place pickup orders as a guest.');
+            }}
+            style={styles.authButton}
+          >
+            <Text style={styles.authButtonText}>Continue as Guest</Text>
+          </Pressable>
+        </View>
+      )}
+
       {/* Sign Out Button (if signed in) */}
-      {user && (
+      {(user || (localPreview && !isMockUser)) && (
         <Pressable
           onPress={() => signOut()}
           style={({ pressed }) => [styles.signOutButton, pressed && styles.pressed]}

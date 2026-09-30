@@ -5,12 +5,7 @@ import { db, functions } from '../../lib/firebase';
 import { runFirestore, ServiceError, toServiceError } from '../serviceError';
 import { OrderService } from '../types';
 import { localDemoOrderStore } from '../localDemoOrderStore';
-
-function usesDevicePreview(): boolean {
-  const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID;
-  const demoMode = process.env.EXPO_PUBLIC_DEMO_MODE === 'true';
-  return __DEV__ && (!demoMode || !projectId?.endsWith('-staging'));
-}
+import { isLocalOrderPreviewEnabled } from '../../utils/localOrderPreview';
 
 function mapOrder(id: string, data: any): CustomerOrder {
   return {
@@ -32,7 +27,7 @@ function mapOrder(id: string, data: any): CustomerOrder {
 
 export const firebaseOrderService: OrderService = {
   async completeDemoCheckout(request: DemoCheckoutRequest, localPreview?: LocalDemoCheckoutPreview): Promise<DemoCheckoutResult> {
-    if (usesDevicePreview()) {
+    if (isLocalOrderPreviewEnabled()) {
       return localDemoOrderStore.completeDemoCheckout(request, localPreview);
     }
 
@@ -63,7 +58,7 @@ export const firebaseOrderService: OrderService = {
   },
 
   async getMyOrders(customerId: string): Promise<CustomerOrder[]> {
-    if (usesDevicePreview()) {
+    if (isLocalOrderPreviewEnabled()) {
       return localDemoOrderStore.getMyOrders(customerId);
     }
 
