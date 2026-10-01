@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState, useMemo } from 'react';
 import { Product } from '../types/product';
 import { Promotion } from '../types/promotion';
+import { useAuth } from './AuthContext';
 
 export interface CartItem {
   product: Product;
@@ -29,6 +30,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [appliedPromotion, setAppliedPromotion] = useState<Promotion | null>(null);
   const [promoCode, setPromoCode] = useState('');
+  const { user, isGuest, loading: authLoading } = useAuth();
+
+  // Empty the cart when the customer logs out or switches to a different account.
+  // Guest -> signed-in keeps the cart so a guest can sign in without losing items.
+  const sessionKey = user?.uid ?? (isGuest ? 'guest' : null);
+  const previousSessionKey = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (authLoading) return;
+    const previous = previousSessionKey.current;
+    previousSessionKey.current = sessionKey;
+    if (previous === undefined || previous === sessionKey) return;
+
+    const loggedOut = previous !== null && sessionKey === null;
+    const switchedAccount = previous !== null && previous !== 'guest' && sessionKey !== null && sessionKey !== previous;
+    if (loggedOut || switchedAccount) {
+      setItems([]);
+      setAppliedPromotion(null);
+      setPromoCode('');
+    }
+  }, [authLoading, sessionKey]);
 
   const addItem = (product: Product) => {
     if (!product.available || product.stockStatus === 'sold_out') return;

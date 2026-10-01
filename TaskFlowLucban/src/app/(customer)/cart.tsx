@@ -6,7 +6,6 @@ import {
   FlatList,
   Pressable,
   TextInput,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +22,7 @@ import { orderService } from '../../services';
 import { useRouter } from 'expo-router';
 import { useLoyalty } from '../../hooks/useLoyalty';
 import { isLocalOrderPreviewEnabled } from '../../utils/localOrderPreview';
+import { confirmAction, notify } from '../../utils/dialog';
 
 export default function CartScreen() {
   const router = useRouter();
@@ -74,7 +74,7 @@ export default function CartScreen() {
       setPromoError(result.valid ? null : result.message);
 
       if (!result.valid) {
-        Alert.alert('Promo Code', result.message);
+        notify('Promo Code', result.message);
         return;
       }
 
@@ -85,26 +85,33 @@ export default function CartScreen() {
     }
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
+    if (checkingOut || submitLockRef.current) return;
+
     if (!canPlaceOrder) {
-      Alert.alert('Continue as a guest', 'Open your profile to start a guest session before placing your order.', [
-        { text: 'Not now', style: 'cancel' },
-        { text: 'Open Profile', onPress: () => {
-          if (localPreview) enterGuestMode();
-          router.push('/(customer)/profile');
-        } },
-      ]);
+      if (!localPreview) {
+        notify('Sign in to order', 'Sign in or create an account from your profile to place a pickup order.');
+        router.push('/(customer)/profile' as any);
+        return;
+      }
+
+      const orderAsGuest = await confirmAction(
+        'Order as a guest?',
+        'Your order is saved on this device only and guest orders do not earn loyalty points. Sign in from your profile to earn points.',
+        'Place Order'
+      );
+      if (!orderAsGuest) return;
+      enterGuestMode();
+      await submitDemoOrder();
       return;
     }
 
-    Alert.alert(
+    const confirmed = await confirmAction(
       'Place pickup order?',
       'Your order will be recorded for pickup. Payment is due when you collect it at the bakery.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Place Order', onPress: () => void submitDemoOrder() },
-      ]
+      'Place Order'
     );
+    if (confirmed) await submitDemoOrder();
   };
 
   const submitDemoOrder = async () => {
@@ -155,7 +162,7 @@ export default function CartScreen() {
         },
       });
     } catch (error) {
-      Alert.alert('Unable to place order', error instanceof Error ? error.message : 'Please try again.');
+      notify('Unable to place order', error instanceof Error ? error.message : 'Please try again.');
     } finally {
       submitLockRef.current = false;
       setCheckingOut(false);
@@ -281,7 +288,7 @@ export default function CartScreen() {
           </View>
         </View>
         <Pressable
-          onPress={handleCheckout}
+          onPress={() => void handleCheckout()}
           disabled={checkingOut}
           style={[styles.checkoutButton, checkingOut && styles.checkoutButtonBusy]}
           accessibilityLabel="Place pickup order"
@@ -290,9 +297,20 @@ export default function CartScreen() {
           {checkingOut ? (
             <ActivityIndicator color={Colors.white} />
           ) : (
-            <Text style={styles.checkoutButtonText}>{canPlaceOrder ? 'Place Pickup Order' : 'Continue to Account'}</Text>
+            <Text style={styles.checkoutButtonText}>{canPlaceOrder ? 'Place Pickup Order' : localPreview ? 'Order as Guest' : 'Sign In to Order'}</Text>
           )}
         </Pressable>
+        {!canPlaceOrder && (
+          <Pressable
+            onPress={() => router.push('/(customer)/profile' as any)}
+            disabled={checkingOut}
+            style={styles.signInLink}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in to your account"
+          >
+            <Text style={styles.signInLinkText}>Have an account? Sign in to earn points</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -461,6 +479,16 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     borderRadius: Spacing.radiusMd,
     alignItems: 'center',
+  },
+  signInLink: {
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    marginTop: Spacing.xs,
+  },
+  signInLinkText: {
+    color: Colors.primary,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.semiBold,
   },
   checkoutButtonBusy: {
     opacity: 0.7,

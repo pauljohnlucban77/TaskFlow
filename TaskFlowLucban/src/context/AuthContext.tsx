@@ -19,6 +19,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   isMockUser: boolean;
   enterGuestMode: () => void;
+  isGuest: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -99,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signOut,
         isMockUser: isMockUser && !guestMode,
         enterGuestMode,
+        isGuest: guestMode && !user,
       }}
     >
       {children}

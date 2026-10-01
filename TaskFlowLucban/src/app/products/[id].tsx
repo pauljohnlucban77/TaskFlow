@@ -25,6 +25,7 @@ import { Colors } from '../../constants/colors';
 import { Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
 import { formatPrice } from '../../utils/formatPrice';
+import { categoryEmoji } from '../../utils/categoryEmoji';
 import { MAX_COMMENT_LENGTH, validateFeedback } from '../../utils/validateFeedback';
 
 export default function ProductDetailScreen() {
@@ -186,7 +187,7 @@ export default function ProductDetailScreen() {
             <Image source={{ uri: product.image }} style={styles.image} contentFit="cover" onError={() => setImageError(true)} />
           ) : (
             <View style={styles.placeholderImage}>
-              <Text style={styles.emoji}>🥧</Text>
+              <Text style={styles.emoji}>{categoryEmoji(product.category)}</Text>
             </View>
           )}
           <View style={styles.topBadges}>

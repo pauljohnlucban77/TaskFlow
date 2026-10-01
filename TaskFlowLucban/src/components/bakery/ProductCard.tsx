@@ -7,6 +7,7 @@ import { Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
 import { formatPrice } from '../../utils/formatPrice';
 import { useCart } from '../../context/CartContext';
+import { categoryEmoji } from '../../utils/categoryEmoji';
 
 interface ProductCardProps {
   product: Product;
@@ -49,7 +50,7 @@ export function ProductCard({ product, onPress }: ProductCardProps) {
             />
           ) : (
             <View style={styles.placeholderImage}>
-              <Text style={styles.emoji}>🥧</Text>
+              <Text style={styles.emoji}>{categoryEmoji(product.category)}</Text>
             </View>
           )}
           <View style={styles.stockBadge}>

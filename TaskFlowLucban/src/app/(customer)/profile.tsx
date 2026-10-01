@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, Pressable, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Pressable, TextInput, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
@@ -8,6 +8,7 @@ import { Colors } from '../../constants/colors';
 import { Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
 import { isLocalOrderPreviewEnabled } from '../../utils/localOrderPreview';
+import { notify } from '../../utils/dialog';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function ProfileScreen() {
 
   const handleAuthAction = async () => {
     if (!inputEmail.trim() || !inputPass.trim()) {
-      Alert.alert('Error', 'Please enter email and password.');
+      notify('Error', 'Please enter email and password.');
       return;
     }
 
@@ -30,15 +31,15 @@ export default function ProfileScreen() {
       setSubmitting(true);
       if (isSignUpMode) {
         await signUp(inputEmail.trim(), inputPass.trim());
-        Alert.alert('Account Created 🎉', 'Welcome to Fred\'s Pies! Your account has been created.');
+        notify('Account Created 🎉', 'Welcome to Fred\'s Pies! Your account has been created.');
       } else {
         await signIn(inputEmail.trim(), inputPass.trim());
-        Alert.alert('Signed In', 'Welcome back to Fred\'s Pies!');
+        notify('Signed In', 'Welcome back to Fred\'s Pies!');
       }
       setInputEmail('');
       setInputPass('');
     } catch (e: any) {
-      Alert.alert('Authentication Error', e.message || 'Failed to authenticate.');
+      notify('Authentication Error', e.message || 'Failed to authenticate.');
     } finally {
       setSubmitting(false);
     }
@@ -171,7 +172,7 @@ export default function ProfileScreen() {
           <Pressable
             onPress={() => {
               enterGuestMode();
-              Alert.alert('Welcome', 'You can now place pickup orders as a guest.');
+              notify('Welcome', 'You can now place pickup orders as a guest.');
             }}
             style={styles.authButton}
           >
@@ -364,4 +365,4 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.md,
     fontWeight: Typography.weights.bold,
   },
-});
+}); 
