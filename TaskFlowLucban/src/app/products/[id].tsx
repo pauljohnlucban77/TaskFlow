@@ -14,7 +14,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { productService } from '../../services';
 import { Product } from '../../types/product';
-import { ProductReviewItem, initialProductReviews } from '../../services/productReviewStore';
+import { ProductReviewItem, loadProductReviews, saveProductReviews } from '../../services/productReviewStore';
 import { useCart } from '../../context/CartContext';
 import { useCurrentCustomer } from '../../hooks/useCurrentCustomer';
 import { StarRating } from '../../components/feedback/StarRating';
@@ -40,7 +40,7 @@ export default function ProductDetailScreen() {
 
   // Reviews state
   const [reviews, setReviews] = useState<ProductReviewItem[]>([]);
-  const [userRating, setUserRating] = useState(5);
+  const [userRating, setUserRating] = useState(0);
   const [userComment, setUserComment] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
@@ -69,8 +69,9 @@ export default function ProductDetailScreen() {
   useEffect(() => {
     if (id) {
       loadProduct();
-      const matching = initialProductReviews.filter((r) => r.productId === id);
-      setReviews(matching);
+      loadProductReviews()
+        .then((storedReviews) => setReviews(storedReviews.filter((review) => review.productId === id)))
+        .catch((e: any) => Alert.alert('Error', e.message || 'Failed to load product reviews.'));
     }
   }, [id]);
 
@@ -95,7 +96,7 @@ export default function ProductDetailScreen() {
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditingReviewId(null);
-    setUserRating(5);
+    setUserRating(0);
     setUserComment('');
     setValidationError(null);
   };
@@ -113,13 +114,13 @@ export default function ProductDetailScreen() {
       const now = new Date().toISOString();
 
       if (isEditing && editingReviewId) {
-        setReviews((prev) =>
-          prev.map((r) =>
-            r.id === editingReviewId
-              ? { ...r, rating: userRating, comment: userComment.trim(), updatedAt: now }
-              : r
-          )
+        const updatedReviews = reviews.map((review) =>
+          review.id === editingReviewId
+            ? { ...review, rating: userRating, comment: userComment.trim(), updatedAt: now }
+            : review
         );
+        await saveProductReviews(id, updatedReviews);
+        setReviews(updatedReviews);
         Alert.alert('Review Updated', 'Your product review has been updated!');
         handleCancelEdit();
       } else {
@@ -133,9 +134,11 @@ export default function ProductDetailScreen() {
           createdAt: now,
           updatedAt: now,
         };
-        setReviews((prev) => [newReview, ...prev]);
+        const updatedReviews = [newReview, ...reviews];
+        await saveProductReviews(id, updatedReviews);
+        setReviews(updatedReviews);
         Alert.alert('Review Submitted! 🌟', 'Thank you for reviewing this product!');
-        setUserRating(5);
+        setUserRating(0);
         setUserComment('');
       }
     } catch (e: any) {
@@ -149,13 +152,20 @@ export default function ProductDetailScreen() {
     setDeletingReview(review);
   };
 
-  const confirmDeleteReview = () => {
+  const confirmDeleteReview = async () => {
     if (!deletingReview) return;
     setIsDeleting(true);
-    setReviews((prev) => prev.filter((r) => r.id !== deletingReview.id));
-    setIsDeleting(false);
-    setDeletingReview(null);
-    Alert.alert('Review Deleted', 'Your review has been deleted.');
+    try {
+      const updatedReviews = reviews.filter((review) => review.id !== deletingReview.id);
+      await saveProductReviews(id, updatedReviews);
+      setReviews(updatedReviews);
+      setDeletingReview(null);
+      Alert.alert('Review Deleted', 'Your review has been deleted.');
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to delete review.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (error) {
@@ -245,7 +255,7 @@ export default function ProductDetailScreen() {
               <Text style={styles.label}>Your Rating</Text>
               <View style={styles.starPickerRow}>
                 <StarRating rating={userRating} onRatingChange={setUserRating} size={32} />
-                <Text style={styles.starPickerLabel}>{userRating} / 5 Stars</Text>
+                <Text style={styles.starPickerLabel}>{userRating ? `${userRating} / 5 Stars` : 'Select a rating'}</Text>
               </View>
 
               <Text style={styles.label}>Your Review</Text>

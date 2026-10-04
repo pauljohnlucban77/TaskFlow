@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FeedbackItem } from '../types/feedback';
 
 export interface ProductReviewItem extends FeedbackItem {
@@ -36,3 +37,22 @@ export const initialProductReviews: ProductReviewItem[] = [
     updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
+
+const PRODUCT_REVIEWS_STORAGE_KEY = '@freds-pies/product-reviews';
+
+export async function loadProductReviews(): Promise<ProductReviewItem[]> {
+  const storedReviews = await AsyncStorage.getItem(PRODUCT_REVIEWS_STORAGE_KEY);
+  if (!storedReviews) return initialProductReviews;
+
+  const parsed: unknown = JSON.parse(storedReviews);
+  return Array.isArray(parsed) ? parsed as ProductReviewItem[] : initialProductReviews;
+}
+
+export async function saveProductReviews(productId: string, productReviews: ProductReviewItem[]): Promise<void> {
+  const allReviews = await loadProductReviews();
+  const otherProductReviews = allReviews.filter((review) => review.productId !== productId);
+  await AsyncStorage.setItem(
+    PRODUCT_REVIEWS_STORAGE_KEY,
+    JSON.stringify([...productReviews, ...otherProductReviews])
+  );
+}

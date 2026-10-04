@@ -22,7 +22,7 @@ export default function GiveFeedbackScreen() {
   const { orderId, productName } = useLocalSearchParams<{ orderId?: string; productName?: string }>();
   const { submitFeedback, submitting } = useFeedback();
 
-  const [rating, setRating] = useState<number>(5);
+  const [rating, setRating] = useState<number>(0);
   const [comment, setComment] = useState<string>('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -45,8 +45,11 @@ export default function GiveFeedbackScreen() {
         : comment.trim();
 
       await submitFeedback(rating, fullComment);
+      setRating(0);
+      setComment('');
+      setValidationError(null);
       Alert.alert(
-        'Thank You! 🥧',
+        'Review Posted!',
         'Your feedback has been submitted successfully.',
         [
           {
